@@ -1,0 +1,569 @@
+#!/usr/bin/env bash
+# 
+# Copyright (c) 2023 ulo
+# 
+# Licensed under the MIT.
+# 
+
+tmp="./tmp"
+out="./out"
+minsize=512
+
+die() {
+    echo -e "${red}ERROR..${normal} = $1"
+    exit 1
+}
+
+cleaning() {
+    for x in $(lsblk | grep $(pwd) | grep -oE 'loop[0-9]+' | sort | uniq); do
+        umount -f /dev/${x}p[1-2] 2>/dev/null
+        umount -f /dev/$x 2>/dev/null
+        losetup -d /dev/$x 2>/dev/null
+    done
+    rm -rf $tmp
+    [ "$1" ] || rm -rf $out
+}
+
+find_devices() {
+    local path=$device_path
+    [ -d $path ] || return
+    local len=0
+    IFS=$'\n'
+    for x in $(ls $path); do
+        [ -f $path/$x/boot-*.tar.gz ] && devices[len++]=$x
+    done
+}
+
+find_kernels() {
+    local path=$kernel_path
+    [ -d $path ] || return
+    local len=0
+    IFS=$'\n'
+    for x in $(ls $path); do
+        [ -f $path/$x/dtb-*.tar.gz ] && [ -f $path/$x/boot-*.tar.gz ] && [ -f $path/$x/modules-*.tar.gz ] \
+            && kernels[len++]=$x
+    done
+}
+
+find_rootfs() {
+    local path=$rootfs_path
+    [ -d $path ] || return
+    local len=0
+    IFS=$'\n'
+    for x in $(ls $path); do
+        firmwares[len++]=$x
+    done
+}
+
+choose_device() {
+    local i=0
+    echo -e "${red}device: ${normal}"
+    choose_option "${devices[*]}" ${#devices[*]}
+    local opt=$?
+    device=${devices[opt]}
+    devices=($device)
+    echo -e "${green}${device}${normal}\n"
+}
+
+choose_rootfs() {
+    local i=0
+    echo -e "${red}Rootfs: ${normal}"
+    choose_option "${firmwares[*]}" ${#firmwares[*]}
+    local opt=$?
+    firmware=${firmwares[opt]}
+    echo -e "${green}${firmware}${normal}\n"
+}
+
+choose_kernel() {
+    local i=0
+    echo -e "${red}Kernel:${normal} "
+    choose_option "${kernels[*]}" ${#kernels[*]}
+    local opt=$?
+    kernel=${kernels[opt]}
+    kernels=($kernel)
+    echo -e "${green}${kernel}${normal}\n"
+}
+
+choose_option() {
+    local options=$1
+    local len=$2
+    local cnt=0
+
+    for x in ${options[*]}; do
+        echo "($((++i))) => $x"
+    done
+
+    [ "$len" = 1 ] && return 0
+
+    while [ $cnt -lt 3 ]; do
+        echo && read -p "Pilih angka: " opt
+        if [ ! "$opt" ]; then
+            opt=0
+            break
+        elif [[ "$opt" -ge 1 && "$opt" -le "$len" ]] 2>/dev/null; then
+            ((opt--))
+            break
+        else
+            ((cnt++))
+            echo "${red}Salah pilih blok..${normal}"
+            sleep 1s
+        fi
+    done
+
+    [ $cnt = 3 ] && die "Bye NooB...!!!"
+
+    return $opt
+}
+
+make_losetup() {
+    local path=$1
+    loop=$(losetup -Pf --show $path)
+    [ $loop ] || die "Error... ${path:2}"
+
+    [ $2 ] && return 0
+
+    loop_seq=$(ls $loop | grep -oE 'loop[0-9]+')
+
+    mount="$tmp/mount"
+    mkdir -p $mount
+
+    [ -e ${loop}p1 ] && {
+        mkdir -p $mount/${loop_seq}p1
+        mount ${loop}p1 $mount/${loop_seq}p1
+    }
+    [ -e ${loop}p2 ] && {
+        mkdir -p $mount/${loop_seq}p2
+        mount ${loop}p2 $mount/${loop_seq}p2
+    }
+    [[ ! -e ${loop}p1 && ! -e ${loop}p2 && -e ${loop} ]] && {
+        mkdir -p $mount/${loop_seq}
+        mount ${loop} $mount/${loop_seq}
+    }
+}
+
+unpack_openwrt() {
+    local path="$rootfs_path/$firmware"
+    local suffix="${firmware##*.}"
+    common_root="$tmp/core/root"
+
+    mkdir -p $common_root
+
+    while true; do
+        case "$suffix" in
+            xz)
+                xz -dc $path > $tmp/${firmware%.*}
+                path=$tmp/${firmware%.*}
+                suffix=${path##*.}
+            ;;
+            gz) 
+                # special for .tar.gz
+                if ls $path | grep -q '.tar.gz$'; then
+                    tar xzf $path -C $common_root
+                    break
+                else
+                    gzip -dc $path > $tmp/${firmware%.*}
+                    path=$tmp/${firmware%.*}
+                    suffix=${path##*.}
+                fi
+            ;;
+            img|ext4)
+                make_losetup $path
+                if [ -d $mount/${loop_seq}p2 ]; then
+                    cp -r $mount/${loop_seq}p2/* $common_root
+                elif [ -d $mount/${loop_seq}p1 ]; then
+                    cp -r $mount/${loop_seq}p1/* $common_root
+                elif [ -d $mount/${loop_seq} ]; then
+                    cp -r $mount/${loop_seq}/* $common_root
+                else
+                    die "error unpack $path"
+                fi
+                break
+            ;;
+            *)
+                die "Format error!"
+            ;;
+        esac
+    done
+    
+    rm -rf $common_root/lib/modules/*/
+}
+
+unpack_boot_kernel() {
+    local path="$kernel_path/$kernel"
+    common_boot="$tmp/core/kernel/$kernel/boot"
+    last_device="$tmp/device/$device"
+
+    mkdir -p $common_boot
+    tar xzf $path/boot-*.tar.gz -C $common_boot 2>/dev/null
+    tar xzf ./core/firmware-*.tar.gz -C $common_root 2>/dev/null
+
+    mkdir -p ${last_device}/$kernel/{boot,boot/dtb,boot/dtb/amlogic,root}
+    cp -r $common_boot/* ${last_device}/$kernel/boot
+    cp -r $common_root/* ${last_device}/$kernel/root
+
+    tar xzf $kernel_path/$kernel/dtb-*.tar.gz -C ${last_device}/$kernel/boot/dtb/amlogic
+    tar xzf $device_path/$device/boot-$device.tar.gz -C ${last_device}/$kernel/boot
+    tar xzf $path/modules-*.tar.gz -C ${last_device}/$kernel/root
+    (cd $tmp/device/$device/$kernel/root/lib/modules/$kernel/ && rm -f build source *.ko 2>/dev/null &&
+    find ./ -type f -name '*.ko' -exec ln -s {} ./ \;)
+
+    [ $(ls $device_path/$device/root | wc -l) = 0 ] || cp -r $device_path/$device/root/* ${last_device}/$kernel/root
+    [ $(ls ./core/root | wc -l) = 0 ] || cp -r ./core/root/* ${last_device}/$kernel/root
+}
+
+make_image() {
+    local image="$out/$device/Openwrt-$device-$kernel.img"
+    [ -d $out/$device ] || mkdir -p $out/$device
+
+    fallocate -l $((16 + 128 + rootsize))M $image
+
+    parted -s $image mklabel msdos
+    parted -s $image mkpart primary fat32 17M 151M
+    parted -s $image mkpart primary ext4 151M 100%
+
+    make_losetup $image 1
+
+    mkfs.vfat -n "BOOT" ${loop}p1 >/dev/null 2>&1
+    mke2fs -F -q -t ext4 -L "ROOTFS" -m 0 ${loop}p2 >/dev/null 2>&1
+
+    if [ "$device" = "s905x" ]; then
+        loader="./core/loader/s905x.bin"
+    elif [ "$device" = "s905x2" ]; then
+        loader="./core/loader/s905x2.bin"
+    elif [ "$device" = "s905x3" ]; then
+        loader="./core/loader/s905x3.bin"
+    elif [ "$device" = "s905x4" ]; then
+        loader="./core/loader/s905x4.bin"
+    fi
+
+    [ "$loader" ] && {
+        # Push bootloader
+        dd if=$loader of=$loop bs=1 count=442 conv=fsync 2>/dev/null
+        dd if=$loader of=$loop bs=512 skip=1 seek=1 conv=fsync 2>/dev/null
+    }
+
+    losetup -d ${loop}
+
+    make_losetup $image
+
+    {
+        set -e
+        cp -r ${last_device}/$kernel/boot/* $mount/${loop_seq}p1
+        cp -r ${last_device}/$kernel/root/* $mount/${loop_seq}p2
+
+        (
+            cd $mount/${loop_seq}p1
+                mv uInitrd-* uInitrd
+                mv vmlinuz-* zImage
+        )
+
+        lain_lain "$mount/${loop_seq}p2"
+    }
+}
+
+lain_lain() {
+    local path=$1
+
+    mkdir -p $path/{boot,opt,run}
+        printf 'pwm_meson' > $path/etc/modules.d/pwm-meson
+        sed -i 's/ttyAMA0/ttyAML0/' $path/etc/inittab
+        sed -i 's/ttyS0/tty0/' $path/etc/inittab
+        echo "pwm_meson" > $path/etc/modules.d/pwm_meson
+
+    if ! grep -q '/tmp/upgrade' $path/etc/init.d/boot; then
+            sed -i '/kmodloader/i\\tmkdir -p \/tmp\/upgrade' $path/etc/init.d/boot
+    fi
+    if ! grep -q 'ulimit -n' $path/etc/init.d/boot; then
+        sed -i '/kmodloader/i\\tulimit -n 131072\n' $path/etc/init.d/boot
+    fi
+
+    chown -R 0:0 $path
+}
+
+set_rootsize() {
+    local cnt=0
+
+    while [ $cnt -lt 3 ]; do
+        read -p "Input angka, default ${minsize}M: " rootsize
+        if [ ! "$rootsize" ]; then
+            rootsize=$minsize
+            break
+        elif [[ "$rootsize" -ge "$minsize" ]] 2>/dev/null; then
+            break
+        else
+            ((cnt++))
+            echo -e "${red}Salah blok...${normal}\n"
+            sleep 1s
+        fi
+    done
+
+    [ $cnt = 3 ] && die "Bye NooB..."
+
+    echo -e "${green}${rootsize}${normal}\n"
+}
+
+extract_kernel() {
+    choose_rootfs
+
+    local path="$rootfs_path/$firmware"
+    local suffix="${firmware##*.}"
+
+    while true; do
+        case "$suffix" in
+            xz)
+                [ -d $tmp ] || mkdir -p $tmp
+                echo -e "${green}unpack${normal}"
+                xz -dc $path > $tmp/${firmware%.*}
+                path=$tmp/${firmware%.*}
+                suffix=${path##*.}
+            ;;
+            img)
+                make_losetup $path
+                break
+            ;;
+            *)
+                die "Format error!"
+            ;;
+        esac
+    done
+
+    local kversion=$(ls $mount/${loop_seq}p2/lib/modules)
+    local version=$(echo $kversion | grep -oE '^[4-5].[0-9]+.[0-9]+')
+
+    echo -e "${green}kernel version${normal}  =>  $kversion"
+
+    mkdir -p $tmp/$version/{boot,boot/dtb,boot/dtb/amlogic,root/lib}
+    cp -r $mount/${loop_seq}p1/{config-*,initrd.img-*,System.map-*,uInitrd-*,vmlinuz-*} $tmp/$version/boot
+    cp -r $mount/${loop_seq}p2/lib/modules $tmp/$version/root/lib/modules/*
+
+    (
+        cd $tmp/$version/root/lib/modules/*/
+        rm -rf *.ko
+        find ./ -type f -name '*.ko' -exec ln -s {} ./ \;
+    )
+
+    (
+        echo -e "${green}package${normal}\t\t=>  dtb-*.tar.gz"
+        cd $tmp/$version/boot/dtb/amlogic
+        tar czf dtb-*.tar.gz * dtb/amlogic
+        mv dtb-*.tar.gz ../
+    )
+
+    (
+        echo -e "${green}package${normal}\t\t=>  boot-$version.tar.gz"
+        cd $tmp/$version/boot
+        tar czf boot-$version.tar.gz *
+        mv boot-$version.tar.gz ../
+    )
+
+    (
+        echo -e "${green}package${normal}\t\t=>  modules-$version.tar.gz"
+        cd $tmp/$version/root
+        tar czf modules-$version.tar.gz lib/
+        mv modules-$version.tar.gz ../
+    )
+
+    rm -rf $tmp/$version/{boot,root}
+
+    [ -f $tmp/$version/boot-$version.tar.gz ] && [ -f $tmp/$version/modules-$version.tar.gz ] && {
+        [ -d $kernel_path/$version ] && {
+            echo && read -p "this version $(echo -e "${yellow}${version}${normal}") Replace? [Y/n] " yn && echo 
+            case "$yn" in
+                n|N) yn=n ;;
+                *) yn=y ;;
+            esac
+        }
+        [[ ! "$yn" || "$yn" = "y" ]] && {
+            [ -d $kernel_path ] || mkdir -p $kernel_path
+            cp -r $tmp/$version $kernel_path
+            chown -R 1000:1000 $kernel_path/$version
+            echo -e "${green}done${normal}"
+        }
+    }
+
+    cleaning
+}
+
+mount_image() {
+    choose_rootfs
+
+    local path="$rootfs_path/$firmware"
+    local suffix="${firmware##*.}"
+
+    while true; do
+        case "$suffix" in
+            xz)
+                [ -d $tmp ] || mkdir -p $tmp
+                echo -e "${green}unpack${normal}"
+                xz -dc $path > $tmp/${firmware%.*}
+                path=$tmp/${firmware%.*}
+                suffix=${path##*.}
+            ;;
+            img)
+                do_losetup $path
+                break
+            ;;
+            *)
+                die "Format error!"
+            ;;
+        esac
+    done
+
+    echo -e "${green}success mounted to ${yellow}${mount:2}/${loop_seq}${normal}"
+}
+
+usage() {
+    cat <<-EOF
+Usage:
+  make [options]
+
+Options:
+    -h, --help
+    -c, --clean
+    -k                  set the kernel (-k 5.9.16)
+    -m                  set the device (-m s905x2)
+    -s, --size=SIZE     set size (-s 768)
+
+EOF
+}
+
+red="\033[31m"
+green="\033[32m"
+yellow="\033[33m"
+normal="\033[0m"
+
+amlogic="s905x s905x2 s905x3 s905x4"
+
+device_path="./device"
+kernel_path="./core/kernel"
+rootfs_path="./openwrt"
+
+clear
+echo
+echo -e "======================================================================"
+echo -e "----------------------------------------------------------------------"
+echo -e "                            ${green}ULO KATOK${normal}                           "
+echo -e "                             By DBAI                                  "
+echo -e "----------------------------------------------------------------------"
+echo -e "======================================================================\n"
+[ $(id -u) = 0 ] || die "please run this script as root"
+
+cleaning
+find_devices
+find_rootfs
+find_kernels
+
+while [ "$1" ]; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit
+        ;;
+        -c|--clean)
+            cleaning
+            echo -e "${green}Cleaning done${normal}"
+            exit
+        ;;
+        -d|--default)
+            : ${device:="all"}
+            : ${firmware:=${firmwares[0]}}
+            : ${kernel:="all"}
+            : ${rootsize:=$minsize}
+        ;;
+        -e)
+            extract_kernel
+            exit
+        ;;
+        -k)
+            kernel=$2
+            if [ -f $kernel_path/$kernel/dtb-*.tar.gz ] && \
+               [ -f $kernel_path/$kernel/boot-*.tar.gz ] && \
+               [ -f $kernel_path/$kernel/modules-*.tar.gz ]; then
+                kernels=($kernel)
+                shift
+            elif [ "$kernel" = "all" ]; then
+                [ ${#kernels[*]} = 0 ] && unset kernel
+                shift
+            elif [ "$kernel" = "latest" ]; then
+                [ ${#kernels[*]} = 0 ] && unset kernel || kernel=${kernels[-1]}
+                shift
+            else
+                die "invalid kernel ${red}$kernel${normal}"
+            fi
+        ;;
+        -m)
+            device=$2
+            if [ -f $device_path/$device/boot-*.tar.gz ]; then
+                devices=($device)
+                shift
+            elif [ "$device" = "all" ]; then
+                [ ${#devices[*]} = 0 ] && unset device
+                shift
+            else
+                die "invalid device ${red}$device${normal}"
+            fi
+        ;;
+        --mount)
+            mount_image
+            exit
+        ;;
+        -s|--size)
+            rootsize=$2
+            if [[ "$rootsize" -ge "$minsize" ]] 2>/dev/null; then
+                shift
+            else
+                die "invalid rootsize ${red}$rootsize${normal}"
+            fi
+        ;;
+        *)
+            usage
+            die "invalid option ${red}$1${normal}"
+        ;;
+    esac
+    shift
+done
+
+[ "$device" ] && {
+    echo -en "${red}device${normal} = "
+    echo -e "${green}${devices[@]}${normal}" | sed 's/ /, /g'
+}
+[ "$firmware" ] && echo -e "firmware\t=>  $firmware"
+[ "$kernel" ] && {
+    echo -en "kernel\t\t=>  "
+    echo -e "${kernels[@]}" | sed 's/ /, /g'
+}
+[ "$rootsize" ] && echo -e "rootsize\t=>  $rootsize"
+[ "$device" ] || [ "$firmware" ] || [ "$kernel" ] || [ "$rootsize" ] && echo 
+
+[ ${#devices[*]} = 0 ] && die "No ${yellow}${device_path:2}${normal} file or directory!"
+[ ${#firmwares[*]} = 0 ] && die "No ${yellow}${rootfs_path:2}${normal} file or directory!"
+[ ${#kernels[*]} = 0 ] && die "No ${yellow}${kernel_path:2}${normal} file or directory!"
+
+[ "$device" ] || choose_device
+[ "$firmware" ] || choose_rootfs
+[ "$kernel" ] || choose_kernel
+[ "$rootsize" ] || set_rootsize
+
+clear
+Total_size="$((128+$rootsize))"
+echo -e "${green}Building Firmware${normal}\n"
+echo -e "${red}Device${normal}  = ${green}$device${normal}"
+echo -e "${red}Kernel${normal}  = ${green}$kernel${normal}"
+echo -e "${red}Size${normal}    = ${green}$Total_size Mib${normal}"
+unpack_openwrt
+
+for kernel in ${kernels[*]}; do
+    for device in ${devices[*]}; do
+    {
+        unpack_boot_kernel
+        make_image
+    } &
+    done
+done
+
+wait
+cleaning 1
+chmod -R 777 $out
+clear
+echo "Selesai"
+
