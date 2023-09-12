@@ -289,7 +289,7 @@ set_rootsize() {
     local cnt=0
 
     while [ $cnt -lt 3 ]; do
-        echo "Input angka, default ${minsize}M" | $lolcat -a -d 10
+        echo "Input angka (512 768 1024 1536) default ${minsize}" | $lolcat -a -d 10
         read -p "" rootsize
         if [ ! "$rootsize" ]; then
             rootsize=$minsize
@@ -461,7 +461,7 @@ echo -e "----------------------------------------------------------------------"
 echo -e "======================================================================\n" | $lolcat -a -d 10
 [ $(id -u) = 0 ] || die "please run this script as root"
 
-cleaning
+# cleaning
 find_devices
 find_rootfs
 find_kernels
@@ -553,10 +553,19 @@ done
 
 clear
 Total_size="$((128+$rootsize))"
-echo -e "${green}Building Firmware${normal}\n" | $lolcat -a -d 10
-echo -e "${red}Device${normal}  = ${green}$device${normal}" | $lolcat -a -d 10
-echo -e "${red}Kernel${normal}  = ${green}$kernel${normal}" | $lolcat -a -d 10
-echo -e "${red}Size${normal}    = ${green}$Total_size Mib${normal}" | $lolcat -a -d 10
+echo
+echo
+echo
+echo
+echo
+echo
+echo
+echo
+echo
+echo -e "${green}                              Building Firmwares${normal}\n" | $lolcat -a -d 10
+echo -e "${red}                               Device${normal}  = ${green}$device${normal}" | $lolcat -a -d 10
+echo -e "${red}                               Kernel${normal}  = ${green}$kernel${normal}" | $lolcat -a -d 10
+echo -e "${red}                               Size${normal}    = ${green}$Total_size M${normal}" | $lolcat -a -d 10
 unpack_openwrt
 
 for kernel in ${kernels[*]}; do
@@ -569,7 +578,7 @@ for kernel in ${kernels[*]}; do
 done
 
 wait
-cleaning 1
+cleaning 0
 chmod -R 777 $out
 clear
 echo
@@ -581,5 +590,5 @@ echo
 echo
 echo
 echo
-echo "                                 Selesai"  | $lolcat -a -d 500
+echo "                                   Selesai"  | $lolcat -a -d 300
 clear
