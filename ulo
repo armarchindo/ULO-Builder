@@ -4,6 +4,10 @@
 # 
 # Licensed under the MIT.
 # 
+lolcat=/usr/games/lolcat
+echo -e "Preparing install ulo dependies" 
+apt install lolcat
+clear
 
 tmp="./tmp"
 out="./out"
@@ -57,31 +61,31 @@ find_rootfs() {
 
 choose_device() {
     local i=0
-    echo -e "${red}device: ${normal}"
+    echo -e "${red}Amlogic devices: ${normal}" | $lolcat -a -d 10
     choose_option "${devices[*]}" ${#devices[*]}
     local opt=$?
     device=${devices[opt]}
     devices=($device)
-    echo -e "${green}${device}${normal}\n"
+    echo -e "${green}${device}${normal}\n" | $lolcat -a -d 10
 }
 
 choose_rootfs() {
     local i=0
-    echo -e "${red}Rootfs: ${normal}"
+    echo -e "${red}Rootfs: ${normal}" | $lolcat -a -d 10
     choose_option "${firmwares[*]}" ${#firmwares[*]}
     local opt=$?
     firmware=${firmwares[opt]}
-    echo -e "${green}${firmware}${normal}\n"
+    echo -e "${green}${firmware}${normal}\n" | $lolcat -a -d 10
 }
 
 choose_kernel() {
     local i=0
-    echo -e "${red}Kernel:${normal} "
+    echo -e "${red}Kernel:${normal}" | $lolcat -a -d 10
     choose_option "${kernels[*]}" ${#kernels[*]}
     local opt=$?
     kernel=${kernels[opt]}
     kernels=($kernel)
-    echo -e "${green}${kernel}${normal}\n"
+    echo -e "${green}${kernel}${normal}\n" | $lolcat -a -d 10
 }
 
 choose_option() {
@@ -90,13 +94,14 @@ choose_option() {
     local cnt=0
 
     for x in ${options[*]}; do
-        echo "($((++i))) => $x"
+        echo -e "${purple}($((++i))) => $x ${normal}"
     done
 
     [ "$len" = 1 ] && return 0
 
     while [ $cnt -lt 3 ]; do
-        echo && read -p "Pilih angka: " opt
+        echo "Pilih angka:"  | $lolcat -a -d 10 
+        read -p "" opt 
         if [ ! "$opt" ]; then
             opt=0
             break
@@ -105,7 +110,7 @@ choose_option() {
             break
         else
             ((cnt++))
-            echo -e "${red}Salah pilih ULO..${normal}"
+            echo -e "${red}Salah pilih ulo..${normal}"
             sleep 1s
         fi
     done
@@ -284,7 +289,8 @@ set_rootsize() {
     local cnt=0
 
     while [ $cnt -lt 3 ]; do
-        read -p "Input angka, default ${minsize}M: " rootsize
+        echo "Input angka, default ${minsize}M" | $lolcat -a -d 10
+        read -p "" rootsize
         if [ ! "$rootsize" ]; then
             rootsize=$minsize
             break
@@ -292,7 +298,7 @@ set_rootsize() {
             break
         else
             ((cnt++))
-            echo -e "${red}Salah blok...${normal}\n"
+            echo -e "${red}Salah ulo...${normal}\n"
             sleep 1s
         fi
     done
@@ -431,6 +437,13 @@ red="\033[31m"
 green="\033[32m"
 yellow="\033[33m"
 normal="\033[0m"
+green="\033[92m"
+yellow="\033[93m"
+blue="\033[94m"
+purple="\033[95m"
+cyan="\033[96m"
+pink="\033[97m"
+default="\033[0m"# Reset
 
 amlogic="s905x s905x2 s905x3 s905x4"
 
@@ -440,12 +453,12 @@ rootfs_path="./openwrt"
 
 clear
 echo
-echo -e "======================================================================"
-echo -e "----------------------------------------------------------------------"
-echo -e "                            ${green}ULO KATOK${normal}                           "
-echo -e "                             By DBAI                                  "
-echo -e "----------------------------------------------------------------------"
-echo -e "======================================================================\n"
+echo -e "======================================================================" | $lolcat -a -d 10
+echo -e "----------------------------------------------------------------------" | $lolcat -a -d 10
+echo -e "                            ${green}ULO KATOK${normal}                           " | $lolcat -a -d 10
+echo -e "                             By DBAI                                  " | $lolcat -a -d 10
+echo -e "----------------------------------------------------------------------" | $lolcat -a -d 10
+echo -e "======================================================================\n" | $lolcat -a -d 10
 [ $(id -u) = 0 ] || die "please run this script as root"
 
 cleaning
@@ -480,12 +493,6 @@ while [ "$1" ]; do
                [ -f $kernel_path/$kernel/boot-*.tar.gz ] && \
                [ -f $kernel_path/$kernel/modules-*.tar.gz ]; then
                 kernels=($kernel)
-                shift
-            elif [ "$kernel" = "all" ]; then
-                [ ${#kernels[*]} = 0 ] && unset kernel
-                shift
-            elif [ "$kernel" = "latest" ]; then
-                [ ${#kernels[*]} = 0 ] && unset kernel || kernel=${kernels[-1]}
                 shift
             else
                 die "invalid kernel ${red}$kernel${normal}"
@@ -546,10 +553,10 @@ done
 
 clear
 Total_size="$((128+$rootsize))"
-echo -e "${green}Building Firmware${normal}\n"
-echo -e "${red}Device${normal}  = ${green}$device${normal}"
-echo -e "${red}Kernel${normal}  = ${green}$kernel${normal}"
-echo -e "${red}Size${normal}    = ${green}$Total_size Mib${normal}"
+echo -e "${green}Building Firmware${normal}\n" | $lolcat -a -d 10
+echo -e "${red}Device${normal}  = ${green}$device${normal}" | $lolcat -a -d 10
+echo -e "${red}Kernel${normal}  = ${green}$kernel${normal}" | $lolcat -a -d 10
+echo -e "${red}Size${normal}    = ${green}$Total_size Mib${normal}" | $lolcat -a -d 10
 unpack_openwrt
 
 for kernel in ${kernels[*]}; do
@@ -565,5 +572,14 @@ wait
 cleaning 1
 chmod -R 777 $out
 clear
-echo "Selesai"
-
+echo
+echo
+echo
+echo
+echo
+echo
+echo
+echo
+echo
+echo "                                 Selesai"  | $lolcat -a -d 500
+clear
