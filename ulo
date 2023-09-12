@@ -105,7 +105,7 @@ choose_option() {
             break
         else
             ((cnt++))
-            echo "${red}Salah pilih blok..${normal}"
+            echo -e "${red}Salah pilih ULO..${normal}"
             sleep 1s
         fi
     done
