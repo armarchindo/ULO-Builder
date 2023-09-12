@@ -197,13 +197,13 @@ unpack_boot_kernel() {
     tar xzf $path/boot-*.tar.gz -C $common_boot 2>/dev/null
     tar xzf ./core/firmware-*.tar.gz -C $common_root 2>/dev/null
 
-    mkdir -p ${last_device}/$kernel/{boot,boot/dtb,boot/dtb/amlogic,root}
+    mkdir -p ${last_device}/$kernel/{boot,boot/dtb,boot/dtb/amlogic,root,root/lib/modules}
     cp -r $common_boot/* ${last_device}/$kernel/boot
     cp -r $common_root/* ${last_device}/$kernel/root
 
     tar xzf $kernel_path/$kernel/dtb-*.tar.gz -C ${last_device}/$kernel/boot/dtb/amlogic
     tar xzf $device_path/$device/boot-$device.tar.gz -C ${last_device}/$kernel/boot
-    tar xzf $path/modules-*.tar.gz -C ${last_device}/$kernel/root
+    tar xzf $path/modules-*.tar.gz -C ${last_device}/$kernel/root/lib/modules
     (cd $tmp/device/$device/$kernel/root/lib/modules/$kernel/ && rm -f build source *.ko 2>/dev/null &&
     find ./ -type f -name '*.ko' -exec ln -s {} ./ \;)
 
