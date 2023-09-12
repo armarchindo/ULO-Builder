@@ -461,7 +461,7 @@ echo -e "----------------------------------------------------------------------"
 echo -e "======================================================================\n" | $lolcat -a -d 10
 [ $(id -u) = 0 ] || die "please run this script as root"
 
-# cleaning
+
 find_devices
 find_rootfs
 find_kernels
