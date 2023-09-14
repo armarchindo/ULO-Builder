@@ -421,7 +421,7 @@ mount_image() {
 usage() {
     cat <<-EOF
 Usage:
-  make [options]
+  ulo [options]
 
 Options:
     -h, --help
