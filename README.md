@@ -3,7 +3,7 @@
 ## Usage
 ```bash
 Usage:
-  make [options]
+  ulo [options]
 
 Options:
     -h, --help
