@@ -1,8 +1,8 @@
 # ULO Builder for OpenWRT
  ULO OpenWRT Builder
- <div align="center">
-  <a href="https://www.youtube.com/watch?v=LfM2Qj29a4U"><img src="https://img.youtube.com/vi/LfM2Qj29a4U/0.jpg" alt="ULO Builder"></a>
-</div>
+ 
+https://github.com/armarchindo/ULO-Builder/assets/7347993/1aeef098-b9ce-49df-92db-585a0eaa3e94
+
 ## Features
  - Support for Amlogic S905x Devices
  - Support for Amlogic S905x2 Devices
