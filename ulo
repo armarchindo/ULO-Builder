@@ -452,15 +452,15 @@ kernel_path="./core/kernel"
 rootfs_path="./openwrt"
 
 clear
-echo
-echo -e "======================================================================" | $lolcat -a -d 10
-echo -e "----------------------------------------------------------------------" | $lolcat -a -d 10
-echo -e "                            ${green}ULO KATOK${normal}                           " | $lolcat -a -d 10
-echo -e "                             By DBAI                                  " | $lolcat -a -d 10
-echo -e "----------------------------------------------------------------------" | $lolcat -a -d 10
-echo -e "======================================================================\n" | $lolcat -a -d 10
+echo -e "
+======================================================================
+----------------------------------------------------------------------
+                            ${green}ULO KATOK${normal}                
+                             By DBAI                                  
+----------------------------------------------------------------------
+======================================================================
+" | $lolcat -a -d 5
 [ $(id -u) = 0 ] || die "please run this script as root"
-
 
 find_devices
 find_rootfs
@@ -553,19 +553,13 @@ done
 
 clear
 Total_size="$((128+$rootsize))"
-echo
-echo
-echo
-echo
-echo
-echo
-echo
-echo
-echo
-echo -e "${green}                              Building Firmwares${normal}\n" | $lolcat -a -d 10
-echo -e "${red}                               Device${normal}  = ${green}$device${normal}" | $lolcat -a -d 10
-echo -e "${red}                               Kernel${normal}  = ${green}$kernel${normal}" | $lolcat -a -d 10
-echo -e "${red}                               Size${normal}    = ${green}$Total_size M${normal}" | $lolcat -a -d 10
+echo -e "\n\n\n\n\n\n\n\n\n
+${green}                              Building Firmwares${normal}\n
+${red}                               Device${normal}  = ${green}$device${normal}
+${red}                               Kernel${normal}  = ${green}$kernel${normal}
+${red}                               Size${normal}    = ${green}$Total_size M${normal}
+" | $lolcat -a -d 5
+
 unpack_openwrt
 
 for kernel in ${kernels[*]}; do
@@ -581,14 +575,7 @@ wait
 cleaning 0
 chmod -R 777 $out
 clear
-echo
-echo
-echo
-echo
-echo
-echo
-echo
-echo
-echo
-echo "                                   Selesai"  | $lolcat -a -d 300
+echo -e '\n\n\n\n\n\n\n\n\n'
+echo "                                   Selesai"  | $lolcat -a -d 1
+echo "           Output file : out/$device/Openwrt-$device-$kernel.img" | $lolcat -a -d 300
 clear
