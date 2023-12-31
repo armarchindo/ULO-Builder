@@ -11,7 +11,7 @@ clear
 
 tmp="./tmp"
 out="./out"
-minsize=512
+minsize=256
 
 die() {
     echo -e "${red}ERROR..${normal} = $1"
@@ -289,7 +289,7 @@ set_rootsize() {
     local cnt=0
 
     while [ $cnt -lt 3 ]; do
-        echo "Input angka (512 768 1024 1536) default ${minsize}" | $lolcat -a -d 10
+        echo "Input angka (256 512 640 768 1024 1536) default ${minsize}" | $lolcat -a -d 10
         read -p "" rootsize
         if [ ! "$rootsize" ]; then
             rootsize=$minsize
