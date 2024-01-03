@@ -200,7 +200,6 @@ unpack_boot_kernel() {
 
     mkdir -p $common_boot
     tar xzf $path/boot-*.tar.gz -C $common_boot 2>/dev/null
-    tar xzf ./core/firmware-*.tar.gz -C $common_root 2>/dev/null
 
     mkdir -p ${last_device}/$kernel/{boot,boot/dtb,boot/dtb/amlogic,root,root/lib/modules}
     cp -r $common_boot/* ${last_device}/$kernel/boot
