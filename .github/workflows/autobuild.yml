@@ -49,11 +49,18 @@ jobs:
         with:
           name: openwrt_package
           path: ./artifact/*
-
-      - name: Upload to release
-        uses: svenstaro/upload-release-action@v2
+          
+      - name: Creating Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          repo_token: ${{ secrets.YOURTOKEN }}
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
           file: ./artifact/*
-          tag: ${{ github.ref }}
-          file_glob: true
+          body: |
+            Openwrt Build
+          draft: false
+          prerelease: false
+          
