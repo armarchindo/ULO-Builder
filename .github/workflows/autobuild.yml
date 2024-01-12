@@ -50,19 +50,18 @@ jobs:
           name: openwrt_package
           path: ./artifact/*
           
-      - name: Upload the packaged OpenWrt
-        uses: ncipollo/release-action@main
+      - name: Upload to Release
+        uses: svenstaro/upload-release-action@v2
         with:
-          tag: OpenWrt_imagebuilder_${{ env.RELEASES_TAG }}_${{ env.PACKAGED_OUTPUTDATE }}
-          artifacts: ${{ env.PACKAGED_OUTPUTPATH }}/*
-          allowUpdates: true
-          removeArtifacts: true
-          replacesArtifacts: true
-          token: ${{ secrets.GH_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./artifact/*
+          asset_name: files
+          tag: ${{ github.ref }}
+          overwrite: true
           body: |
             ## OpenWrt Image
             ### Kernel :
             - 6.6.6
             - 6.1.66
             - 4.9.337
-          
+            
