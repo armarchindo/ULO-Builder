@@ -41,20 +41,20 @@ jobs:
           
       - name: Creating Package Artifact
         run: |
-          mkdir -p ./artifact/output/${{ matrix.devices }}
-          cp -rf ./out/${{ matrix.devices }} ./artifact
+          mkdir -p ./artifact
+          cp -rf ./out/${{ matrix.devices }}/* ./artifact/
           
       - name: Delivering Package
         uses: actions/upload-artifact@v2
         with:
           name: openwrt_package
-          path: ./artifact/{{ matrix.devices }}
+          path: ./artifact/*
 
       - name: Upload to release
         if: github.event == 'release'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.YOURTOKEN }}
-          file: ./artifact/{{ matrix.devices }}/*
+          file: ./artifact/*
           tag: ${{ github.ref }}
           file_glob: true
