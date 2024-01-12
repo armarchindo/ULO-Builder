@@ -50,17 +50,19 @@ jobs:
           name: openwrt_package
           path: ./artifact/*
           
-      - name: Creating Release
-        id: create_release
-        uses: actions/create-release@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload the packaged OpenWrt
+        uses: ncipollo/release-action@main
         with:
-          tag_name: ${{ matrix.devices }}
-          release_name: Release ${{ matrix.devices }}
-          file: ./artifact/*
+          tag: OpenWrt_imagebuilder_${{ env.RELEASES_TAG }}_${{ env.PACKAGED_OUTPUTDATE }}
+          artifacts: ${{ env.PACKAGED_OUTPUTPATH }}/*
+          allowUpdates: true
+          removeArtifacts: true
+          replacesArtifacts: true
+          token: ${{ secrets.GH_TOKEN }}
           body: |
-            Openwrt Build
-          draft: false
-          prerelease: false
+            ## OpenWrt Image
+            ### Kernel :
+            - 6.6.6
+            - 6.1.66
+            - 4.9.337
           
