@@ -7,7 +7,6 @@
 lolcat=/usr/games/lolcat
 echo -e "Preparing install ulo dependies" 
 apt install lolcat &> /dev/null
-clear
 
 tmp="./tmp"
 out="./out"
@@ -442,7 +441,7 @@ blue="\033[94m"
 purple="\033[95m"
 cyan="\033[96m"
 pink="\033[97m"
-default="\033[0m"# Reset
+default="\033[0m"
 
 amlogic="s905x s905x2 s905x3 s905x4"
 
@@ -450,7 +449,6 @@ device_path="./device"
 kernel_path="./core/kernel"
 rootfs_path="./openwrt"
 
-clear
 echo -e "
 ======================================================================
 ----------------------------------------------------------------------
@@ -550,7 +548,6 @@ done
 [ "$kernel" ] || choose_kernel
 [ "$rootsize" ] || set_rootsize
 
-clear
 Total_size="$((128+$rootsize))"
 echo -e "\n\n\n\n\n\n\n\n\n
 ${green}                              Building Firmwares${normal}\n
@@ -573,8 +570,8 @@ done
 wait
 cleaning 0
 chmod -R 777 $out
-clear
+pigz -qf $out/$device/Openwrt-$device-$kernel.img || gzip $out/$device/Openwrt-$device-$kernel.img
 echo -e '\n\n\n\n\n\n\n\n\n'
 echo "                                   Selesai"  | $lolcat -a -d 1
 echo "           Output file : out/$device/Openwrt-$device-$kernel.img" | $lolcat -a -d 30
-clear
+
