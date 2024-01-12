@@ -442,7 +442,7 @@ blue="\033[94m"
 purple="\033[95m"
 cyan="\033[96m"
 pink="\033[97m"
-default="\033[0m"# Reset
+default="\033[0m"
 
 amlogic="s905x s905x2 s905x3 s905x4"
 
