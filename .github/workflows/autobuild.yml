@@ -49,19 +49,12 @@ jobs:
         with:
           name: openwrt_package
           path: ./artifact/*
-          
-      - name: Upload to Release
+
+      - name: Upload release asset
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: artifact
-          asset_name: files
+          file: ./artifact/*
           tag: ${{ github.ref }}
-          overwrite: true
-          body: |
-            ## OpenWrt Image
-            ### Kernel :
-            - 6.6.6
-            - 6.1.66
-            - 4.9.337
-            
+          file_glob: true
+         
