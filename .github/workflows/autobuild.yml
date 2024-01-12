@@ -15,6 +15,7 @@ jobs:
     strategy:
       matrix:
         kernel: [4.9.337, 6.1.66, 6.6.6]
+        devices: [s905x, s905x2, s905x3, s905x4]
     name: Build IPK Files
     runs-on: ubuntu-latest
     steps:
@@ -36,12 +37,12 @@ jobs:
           
       - name: Building OpenWrt
         run: |
-          sudo ./ulo -k ${{ matrix.kernel }} -m s905x -s 512
+          sudo ./ulo -k ${{ matrix.kernel }} -m ${{ matrix.devices }} -s 512
           
       - name: Creating Package Artifact
         run: |
-          mkdir -p ./artifact/output
-          cp -rf ./out ./artifact
+          mkdir -p ./artifact/output/${{ matrix.devices }}
+          cp -rf ./out/${{ matrix.devices }} ./artifact
           
       - name: Delivering Package
         uses: actions/upload-artifact@v2
