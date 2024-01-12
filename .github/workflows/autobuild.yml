@@ -57,4 +57,10 @@ jobs:
           file: ./artifact/*
           tag: ${{ github.ref }}
           file_glob: true
+          body: |
+            ## OpenWRT Release
+            Kernel :
+            - 4.9.337
+            - 6.6.6
+            - 6.1.66
          
