@@ -6,7 +6,7 @@
 # 
 lolcat=/usr/games/lolcat
 echo -e "Preparing install ulo dependies" 
-apt install lolcat &> /dev/null
+apt install lolcat pigz
 
 tmp="./tmp"
 out="./out"
