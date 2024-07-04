@@ -5,12 +5,38 @@
 # Licensed under the MIT.
 # 
 lolcat=/usr/games/lolcat
-echo -e "Preparing install ulo dependies" 
-apt install lolcat pigz
 
 tmp="./tmp"
 out="./out"
 minsize=256
+
+check_depedencies() {
+	echo -e "Preparing install ulo dependies" 
+	req=(lolcat pigz)
+	list=`dpkg -l | grep -E "lolcat|pigz" | awk '{ print $2 }'`
+	for req_pkg in ${req[@]}; do
+		for lst_pkg in $list; do
+			stat=0
+			if [ ${req_pkg} == $lst_pkg ] ; then
+				echo "$req_pkg Installed"
+				stat=0
+			break;
+			else
+				stat=1
+			fi
+		done
+		if [ $stat = 1 ] ; then
+			echo "Package $req_pkg "
+			echo "Installing $req_pkg "
+			apt install $req_pkg
+		fi
+	done
+	echo -e "Done...!!!"
+	sleep 2
+	clear
+}
+
+check_depedencies
 
 die() {
     echo -e "${red}ERROR..${normal} = $1"
@@ -22,6 +48,7 @@ cleaning() {
         umount -f /dev/${x}p[1-2] 2>/dev/null
         umount -f /dev/$x 2>/dev/null
         losetup -d /dev/$x 2>/dev/null
+        losetup -D 2>/dev/null
     done
     rm -rf $tmp
     [ "$1" ] || rm -rf $out
@@ -60,7 +87,7 @@ find_rootfs() {
 
 choose_device() {
     local i=0
-    echo -e "${red}Amlogic devices: ${normal}" | $lolcat -a -d 10
+    echo -e "${red}Chipset: ${normal}" | $lolcat -a -d 10
     choose_option "${devices[*]}" ${#devices[*]}
     local opt=$?
     device=${devices[opt]}
@@ -70,7 +97,7 @@ choose_device() {
 
 choose_rootfs() {
     local i=0
-    echo -e "${red}Rootfs: ${normal}" | $lolcat -a -d 10
+    echo -e "${red}ROOTFS: ${normal}" | $lolcat -a -d 10
     choose_option "${firmwares[*]}" ${#firmwares[*]}
     local opt=$?
     firmware=${firmwares[opt]}
@@ -99,7 +126,7 @@ choose_option() {
     [ "$len" = 1 ] && return 0
 
     while [ $cnt -lt 3 ]; do
-        echo "Pilih angka:"  | $lolcat -a -d 10 
+        echo "Select Number:"  | $lolcat -a -d 10 
         read -p "" opt 
         if [ ! "$opt" ]; then
             opt=0
@@ -197,14 +224,31 @@ unpack_boot_kernel() {
     common_boot="$tmp/core/kernel/$kernel/boot"
     last_device="$tmp/device/$device"
 
+    local is_amlogic=false
+    local is_allwinner=false
+    local is_rockchip=false
+
+    echo $amlogic | grep -iq $device && is_amlogic=true
+    echo $allwinner | grep -iq $device && is_allwinner=true
+    echo $rockchip | grep -iq $device && is_rockchip=true
+
     mkdir -p $common_boot
     tar xzf $path/boot-*.tar.gz -C $common_boot 2>/dev/null
 
-    mkdir -p ${last_device}/$kernel/{boot,boot/dtb,boot/dtb/amlogic,root,root/lib/modules}
+    if [ $is_amlogic = true ]; then
+        mkdir -p ${last_device}/$kernel/{boot,boot/dtb,boot/dtb/amlogic,root,root/lib/modules}
+        tar xzf $kernel_path/$kernel/dtb-*.tar.gz -C ${last_device}/$kernel/boot/dtb/amlogic
+    elif [ $is_allwinner = true ]; then
+        mkdir -p ${last_device}/$kernel/{boot,boot/dtb,boot/dtb/allwinner,root,root/lib/modules}
+        tar xzf $kernel_path/$kernel/dtb-*.tar.gz -C ${last_device}/$kernel/boot/dtb/allwinner
+    elif [ $is_rockchip = true ]; then
+        mkdir -p ${last_device}/$kernel/{boot,boot/dtb,boot/dtb/rockchip,root,root/lib/modules}
+        tar xzf $kernel_path/$kernel/dtb-*.tar.gz -C ${last_device}/$kernel/boot/dtb/rockchip
+    fi
+    
     cp -r $common_boot/* ${last_device}/$kernel/boot
     cp -r $common_root/* ${last_device}/$kernel/root
 
-    tar xzf $kernel_path/$kernel/dtb-*.tar.gz -C ${last_device}/$kernel/boot/dtb/amlogic
     tar xzf $device_path/$device/boot-$device.tar.gz -C ${last_device}/$kernel/boot
     tar xzf $path/modules-*.tar.gz -C ${last_device}/$kernel/root/lib/modules
     (cd $tmp/device/$device/$kernel/root/lib/modules/$kernel/ && rm -f build source *.ko 2>/dev/null &&
@@ -226,24 +270,61 @@ make_image() {
 
     make_losetup $image 1
 
-    mkfs.vfat -n "BOOT" ${loop}p1 >/dev/null 2>&1
+    local is_amlogic=false
+    echo $amlogic | grep -iq $device && is_amlogic=true
+    local is_rockchip=false
+    echo $rockchip | grep -iq $device && is_rockchip=true
+    local is_allwinner=false
+    echo $allwinner | grep -iq $device && is_allwinner=true
+
+    if [ $is_amlogic = true ]; then
+        mke2fs -F -q -t ext4 -L "BOOT" -m 0 ${loop}p1 >/dev/null 2>&1
+    else
+        mkfs.vfat -n "BOOT" ${loop}p1 >/dev/null 2>&1
+    fi
     mke2fs -F -q -t ext4 -L "ROOTFS" -m 0 ${loop}p2 >/dev/null 2>&1
 
     if [ "$device" = "s905x" ]; then
-        loader="./core/loader/s905x.bin"
+        loader="./core/loader/amlogic/s905x.bin"
     elif [ "$device" = "s905x2" ]; then
-        loader="./core/loader/s905x2.bin"
+        loader="./core/loader/amlogic/s905x2.bin"
     elif [ "$device" = "s905x3" ]; then
-        loader="./core/loader/s905x3.bin"
+        loader="./core/loader/amlogic/s905x3.bin"
     elif [ "$device" = "s905x4" ]; then
-        loader="./core/loader/s905x4.bin"
+        loader="./core/loader/amlogic/s905x4.bin"
+    elif [ "$device" = "h618" ]; then
+        loader="./core/loader/allwinner/u-boot-sunxi-with-spl.bin"
+        loader1="./core/loader/allwinner/xxx.bin"
+        loader2="./core/loader/allwinner/xxx.bin"
+    elif [ "$device" = "rk3566" ]; then
+        loader="./core/loader/rockchip/idbloader.img"  
+        loader1="./core/loader/rockchip/u-boot.itb"
+        loader2="./core/loader/rockchip/xxx.bin"     
     fi
 
-    [ "$loader" ] && {
-        # Push bootloader
-        dd if=$loader of=$loop bs=1 count=442 conv=fsync 2>/dev/null
+    if [ $is_amlogic = true ]; then
+        echo -e "${green}Adding Amlogic Bootloader${normal}"
+        dd if=$loader of=$loop bs=1 count=444 conv=fsync 2>/dev/null
         dd if=$loader of=$loop bs=512 skip=1 seek=1 conv=fsync 2>/dev/null
-    }
+    fi
+
+    if [ $is_allwinner = true ]; then
+        echo -e "${green}Adding Allwinner Bootloader${normal}"
+        dd if=$loader of=$loop bs=8k seek=1 conv=fsync,notrunc 2>/dev/null
+    #else
+    #    dd if=$loader of=$loop bs=8k seek=1 conv=fsync,notrunc 2>/dev/null
+    #    dd if=$loader of=$loop bs=8k seek=5 conv=fsync,notrunc 2>/dev/null
+    fi
+	
+    if [ $is_rockchip = true ]; then
+        echo -e "${green}Adding RK Bootloader${normal}"
+        dd if=$loader of=$loop conv=fsync,notrunc bs=512 seek=64 2>/dev/null
+        dd if=$loader1 of=$loop conv=fsync,notrunc bs=512 seek=16384 2>/dev/null
+    #else
+    #    dd if=$loader of=$loop conv=fsync,notrunc bs=512 seek=64 2>/dev/null
+    #    dd if=$loader1 of=$loop conv=fsync,notrunc bs=512 seek=16384 2>/dev/null
+    #    dd if=$loader2 of=$loop conv=fsync,notrunc bs=512 seek=24576 2>/dev/null
+    fi    
 
     losetup -d ${loop}
 
@@ -256,8 +337,16 @@ make_image() {
 
         (
             cd $mount/${loop_seq}p1
-                mv uInitrd-* uInitrd
-                mv vmlinuz-* zImage
+                if [ $is_allwinner = true ]; then
+                    cp uInitrd-* uInitrd
+                    cp vmlinuz-* zImage
+                elif [ $is_rockchip = true ]; then
+                    cp uInitrd-* uInitrd
+                    cp vmlinuz-* Image
+                elif [ $is_amlogic = true ]; then
+                    mv uInitrd-* uInitrd
+                    mv vmlinuz-* zImage
+                fi
         )
 
         lain_lain "$mount/${loop_seq}p2"
@@ -266,21 +355,59 @@ make_image() {
 
 lain_lain() {
     local path=$1
+    
+    [ -d $path ] && {
+        mkdir -p $path/{boot,opt,run}
 
-    mkdir -p $path/{boot,opt,run}
-        printf 'pwm_meson' > $path/etc/modules.d/pwm-meson
-        sed -i 's/ttyAMA0/ttyAML0/' $path/etc/inittab
-        sed -i 's/ttyS0/tty0/' $path/etc/inittab
-        echo "pwm_meson" > $path/etc/modules.d/pwm_meson
+        local is_amlogic=false
+        local is_allwinner=false
+        local is_rockchip=false
 
-    if ! grep -q '/tmp/upgrade' $path/etc/init.d/boot; then
-            sed -i '/kmodloader/i\\tmkdir -p \/tmp\/upgrade' $path/etc/init.d/boot
-    fi
-    if ! grep -q 'ulimit -n' $path/etc/init.d/boot; then
-        sed -i '/kmodloader/i\\tulimit -n 131072\n' $path/etc/init.d/boot
-    fi
+        echo $amlogic | grep -iq $device && is_amlogic=true
+        echo $allwinner | grep -iq $device && is_allwinner=true
+        echo $rockchip | grep -iq $device && is_rockchip=true
 
-    chown -R 0:0 $path
+        if [ $is_amlogic = true ]; then
+            printf 'pwm_meson' > $path/etc/modules.d/pwm-meson
+            sed -i 's/ttyAMA0/ttyAML0/' $path/etc/inittab
+            sed -i 's/ttyS0/tty0/' $path/etc/inittab
+
+            if ! grep -q '/tmp/upgrade' $path/etc/init.d/boot; then
+                sed -i '/kmodloader/i\\tmkdir -p \/tmp\/upgrade' $path/etc/init.d/boot
+            fi
+        elif [ $is_allwinner = true ]; then
+            sed -i 's/ttyAMA0/tty1/' $path/etc/inittab
+            sed -i 's/ttyS0/ttyS2/' $path/etc/inittab
+
+            echo "sprdwl_ng" >$path/etc/modules.d/sprdwl_ng
+            echo "uwe5622_bsp_sdio" >$path/etc/modules.d/uwe5622_bsp_sdio
+            echo "sprdbt_tty" >$path/etc/modules.d/sprdbt_tty
+
+            cp $path/lib/firmware/unisoc/* $path/lib/firmware
+
+        elif [ $is_rockchip = true ]; then
+            sed -i 's/ttyAMA0/tty1/' $path/etc/inittab
+            sed -i 's/ttyS0/ttyS2/' $path/etc/inittab
+            
+            echo "sprdwl_ng" >$path/etc/modules.d/sprdwl_ng
+            echo "uwe5622_bsp_sdio" >$path/etc/modules.d/uwe5622_bsp_sdio
+            echo "sprdbt_tty" >$path/etc/modules.d/sprdbt_tty
+            
+            cp $path/lib/firmware/unisoc/* $path/lib/firmware
+        fi
+
+        if ! grep -q 'ulimit -n' $path/etc/init.d/boot; then
+            sed -i '/kmodloader/i\\tulimit -n 131072\n' $path/etc/init.d/boot
+        fi
+		
+        wireless_mac80211="$path/lib/netifd/wireless/mac80211.sh"
+        [[ -f "${wireless_mac80211}" ]] && {
+            cp -f ${wireless_mac80211} ${wireless_mac80211}.bak
+            sed -i "s|iw |ipconfig |g" ${wireless_mac80211}
+        }
+
+        chown -R 0:0 $path
+    }
 }
 
 set_rootsize() {
@@ -346,13 +473,23 @@ extract_kernel() {
         find ./ -type f -name '*.ko' -exec ln -s {} ./ \;
     )
 
-    (
+    if [ $is_amlogic = true ]; then
         echo -e "${green}package${normal}\t\t=>  dtb-*.tar.gz"
         cd $tmp/$version/boot/dtb/amlogic
         tar czf dtb-*.tar.gz * dtb/amlogic
         mv dtb-*.tar.gz ../
-    )
-
+    elif [ $is_allwinner = true ]; then    
+        echo -e "${green}package${normal}\t\t=>  dtb-*.tar.gz"
+        cd $tmp/$version/boot/dtb/allwinner
+        tar czf dtb-*.tar.gz * dtb/allwinner
+        mv dtb-*.tar.gz ../
+    elif [ $is_rockchip = true ]; then    
+        echo -e "${green}package${normal}\t\t=>  dtb-*.tar.gz"
+        cd $tmp/$version/boot/dtb/rockchip
+        tar czf dtb-*.tar.gz * dtb/rockchip
+        mv dtb-*.tar.gz ../
+    fi
+        
     (
         echo -e "${green}package${normal}\t\t=>  boot-$version.tar.gz"
         cd $tmp/$version/boot
@@ -443,7 +580,11 @@ cyan="\033[96m"
 pink="\033[97m"
 default="\033[0m"
 
+
+# SOC
 amlogic="s905x s905x2 s905x3 s905x4"
+allwinner="h618"
+rockchip="rk3566"
 
 device_path="./device"
 kernel_path="./core/kernel"
@@ -574,4 +715,3 @@ pigz -qf $out/$device/Openwrt-$device-$kernel.img || gzip $out/$device/Openwrt-$
 echo -e '\n\n\n\n\n\n\n\n\n'
 echo "                                   Selesai"  | $lolcat -a -d 1
 echo "           Output file : out/$device/Openwrt-$device-$kernel.img" | $lolcat -a -d 30
-
