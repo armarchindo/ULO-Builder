@@ -8,6 +8,9 @@ https://github.com/armarchindo/ULO-Builder/assets/7347993/1aeef098-b9ce-49df-92d
  - Support for Amlogic S905x2 Devices
  - Support for Amlogic S905x3 Devices
  - Support for Amlogic S905x4 Devices
+ - Support for Allwinner H618 Devices
+ - Support for Allwinner H6 Devices
+ - Support for Rockchip RK3566 Devices
    
 ## Requirements
  - `lolcat` and default packages from Linux
