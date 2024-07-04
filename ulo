@@ -293,9 +293,9 @@ make_image() {
     elif [ "$device" = "s905x4" ]; then
         loader="./core/loader/amlogic/s905x4.bin"
     elif [ "$device" = "h618" ]; then
-        loader="./core/loader/allwinner/u-boot-sunxi-with-spl.bin"
-        loader1="./core/loader/allwinner/xxx.bin"
-        loader2="./core/loader/allwinner/xxx.bin"
+        loader="./core/loader/allwinner/u-boot-sunxi-with-spl-h618.bin"
+    elif [ "$device" = "h6" ]; then
+        loader="./core/loader/allwinner/u-boot-sunxi-with-spl-h6.bin"
     elif [ "$device" = "rk3566" ]; then
         loader="./core/loader/rockchip/idbloader.img"  
         loader1="./core/loader/rockchip/u-boot.itb"
@@ -339,7 +339,7 @@ make_image() {
             cd $mount/${loop_seq}p1
                 if [ $is_allwinner = true ]; then
                     cp uInitrd-* uInitrd
-                    cp vmlinuz-* zImage
+                    cp vmlinuz-* Image
                 elif [ $is_rockchip = true ]; then
                     cp uInitrd-* uInitrd
                     cp vmlinuz-* Image
@@ -583,7 +583,7 @@ default="\033[0m"
 
 # SOC
 amlogic="s905x s905x2 s905x3 s905x4"
-allwinner="h618"
+allwinner="h618 h6"
 rockchip="rk3566"
 
 device_path="./device"
