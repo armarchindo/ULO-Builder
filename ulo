@@ -88,6 +88,8 @@ download_requirement_files() {
         echo -e "Done..." | $lolcat -a -d 10
     fi
     rm -r $tmp_path
+    echo -e "${red}Please re-run this script${normal}"
+    exit 0
 }
 
 check_depedencies
@@ -747,4 +749,4 @@ chmod -R 777 $out
 pigz -qf $out/$device/Openwrt-$device-$kernel.img || gzip $out/$device/Openwrt-$device-$kernel.img
 echo -e '\n\n\n\n\n\n\n\n\n'
 echo "                                   Selesai"  | $lolcat -a -d 1
-echo "           Output file : out/$device/Openwrt-$device-$kernel.img" | $lolcat -a -d 30
+echo "           Output file : out/$device/Openwrt-$device-$kernel.img.gz" | $lolcat -a -d 30
