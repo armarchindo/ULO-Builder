@@ -1,3 +1,0 @@
-txinrx_thres=64
-dpc_cpucore=3
-rxf_cpucore=2

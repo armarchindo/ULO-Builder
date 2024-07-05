@@ -10,6 +10,25 @@ tmp="./tmp"
 out="./out"
 minsize=256
 
+# SOC
+amlogic="s905x s905x2 s905x3 s905x4"
+allwinner="h618 h6"
+rockchip="rk3566"
+
+# directory path
+device_path="./device"
+kernel_path="./core/kernel"
+rootfs_path="./openwrt"
+fwdriver_path="./core/root/lib"
+
+# Kernel & Firmware Repository
+repos="https://github.com/armarchindo/ULO-repository"
+
+die() {
+    echo -e "${red}ERROR..${normal} = $1"
+    exit 1
+}
+
 check_depedencies() {
 	echo -e "Preparing install ulo dependies" 
 	req=(lolcat pigz)
@@ -36,12 +55,42 @@ check_depedencies() {
 	clear
 }
 
-check_depedencies
-
-die() {
-    echo -e "${red}ERROR..${normal} = $1"
-    exit 1
+check_requirement_files() {
+    
+    find_devices
+    find_rootfs
+    find_kernels
+    [ ${#devices[*]} = 0 ] && die "No ${yellow}${device_path:2}${normal} file or directory!"
+    [ ${#firmwares[*]} = 0 ] && die "No ${yellow}${rootfs_path:2}${normal} file or directory!"
+    [ ${#kernels[*]} = 0 ] && echo -e "${yellow}${kernel_path:2}${normal} not found." | download_requirement_files
+    [ -d "${fwdriver_path}/firmware" ] || download_requirement_files
+    
 }
+
+download_requirement_files() {
+    local tmp_path="./tmp"
+
+    [ -d "${tmp_path}" ] || mkdir $tmp_path
+
+    if [ ! -f "${tmp_path}/data.zip" ]; then
+        echo -e "Downloading Kernel & Driver Firmware" | $lolcat -a -d 1
+        wget -q -O "${tmp_path}/data.zip" "${repos}/archive/refs/heads/main.zip" --show-progress
+        echo -e "Unzipping Kernel & Driver Firmware" | $lolcat -a -d 1
+        unzip $tmp_path/data.zip -d $tmp_path
+        cp -rf $tmp_path/ULO-repository-main/kernel ./core/
+        cp -rf $tmp_path/ULO-repository-main/firmware $fwdriver_path/
+        echo -e "Done..." | $lolcat -a -d 10
+    else
+        echo -e "Unzipping Kernel & Driver Firmware" | $lolcat -a -d 1
+        unzip -q $tmp_path/data.zip -d $tmp_path
+        cp -rf $tmp_path/ULO-repository-main/kernel ./core/
+        cp -rf $tmp_path/ULO-repository-main/firmware $fwdriver_path/
+        echo -e "Done..." | $lolcat -a -d 10
+    fi
+    rm -r $tmp_path
+}
+
+check_depedencies
 
 cleaning() {
     for x in $(lsblk | grep $(pwd) | grep -oE 'loop[0-9]+' | sort | uniq); do
@@ -580,16 +629,6 @@ cyan="\033[96m"
 pink="\033[97m"
 default="\033[0m"
 
-
-# SOC
-amlogic="s905x s905x2 s905x3 s905x4"
-allwinner="h618 h6"
-rockchip="rk3566"
-
-device_path="./device"
-kernel_path="./core/kernel"
-rootfs_path="./openwrt"
-
 echo -e "
 ======================================================================
 ----------------------------------------------------------------------
@@ -600,9 +639,7 @@ echo -e "
 " | $lolcat -a -d 5
 [ $(id -u) = 0 ] || die "please run this script as root"
 
-find_devices
-find_rootfs
-find_kernels
+check_requirement_files
 
 while [ "$1" ]; do
     case "$1" in
@@ -679,10 +716,6 @@ done
 }
 [ "$rootsize" ] && echo -e "rootsize\t=>  $rootsize"
 [ "$device" ] || [ "$firmware" ] || [ "$kernel" ] || [ "$rootsize" ] && echo 
-
-[ ${#devices[*]} = 0 ] && die "No ${yellow}${device_path:2}${normal} file or directory!"
-[ ${#firmwares[*]} = 0 ] && die "No ${yellow}${rootfs_path:2}${normal} file or directory!"
-[ ${#kernels[*]} = 0 ] && die "No ${yellow}${kernel_path:2}${normal} file or directory!"
 
 [ "$device" ] || choose_device
 [ "$firmware" ] || choose_rootfs
