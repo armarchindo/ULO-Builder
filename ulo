@@ -13,7 +13,7 @@ minsize=256
 # SOC
 amlogic="s905x s905x2 s905x3 s905x4"
 allwinner="h618 h6"
-rockchip="rk3566"
+rockchip="rk3566 rk3588"
 
 # directory path
 device_path="./device"
@@ -335,31 +335,21 @@ make_image() {
     fi
     mke2fs -F -q -t ext4 -L "ROOTFS" -m 0 ${loop}p2 >/dev/null 2>&1
 
-    if [ "$device" = "s905x" ]; then
-        loader="./core/loader/amlogic/s905x.bin"
-    elif [ "$device" = "s905x2" ]; then
-        loader="./core/loader/amlogic/s905x2.bin"
-    elif [ "$device" = "s905x3" ]; then
-        loader="./core/loader/amlogic/s905x3.bin"
-    elif [ "$device" = "s905x4" ]; then
-        loader="./core/loader/amlogic/s905x4.bin"
-    elif [ "$device" = "h618" ]; then
-        loader="./core/loader/allwinner/u-boot-sunxi-with-spl-h618.bin"
-    elif [ "$device" = "h6" ]; then
-        loader="./core/loader/allwinner/u-boot-sunxi-with-spl-h6.bin"
-    elif [ "$device" = "rk3566" ]; then
-        loader="./core/loader/rockchip/idbloader.img"  
-        loader1="./core/loader/rockchip/u-boot.itb"
-        loader2="./core/loader/rockchip/xxx.bin"     
-    fi
+    #if [ "$device" = "s905x" ]; then
+    #    loader="./core/loader/amlogic/s905x.bin"
+    #elif [ "$device" = "s905x2" ]; then
+    #    loader="./core/loader/amlogic/s905x2.bin"
+    #fi
 
     if [ $is_amlogic = true ]; then
+        loader="./core/loader/amlogic/${device}.bin"
         echo -e "${green}Adding Amlogic Bootloader${normal}"
         dd if=$loader of=$loop bs=1 count=444 conv=fsync 2>/dev/null
         dd if=$loader of=$loop bs=512 skip=1 seek=1 conv=fsync 2>/dev/null
     fi
 
     if [ $is_allwinner = true ]; then
+        loader="./core/loader/allwinner/u-boot-sunxi-with-spl-${device}.bin"
         echo -e "${green}Adding Allwinner Bootloader${normal}"
         dd if=$loader of=$loop bs=8k seek=1 conv=fsync,notrunc 2>/dev/null
     #else
@@ -368,6 +358,8 @@ make_image() {
     fi
 	
     if [ $is_rockchip = true ]; then
+        loader="./core/loader/rockchip/idbloader-${device}.img"
+        loader1="./core/loader/rockchip/u-boot-${device}.itb"
         echo -e "${green}Adding RK Bootloader${normal}"
         dd if=$loader of=$loop conv=fsync,notrunc bs=512 seek=64 2>/dev/null
         dd if=$loader1 of=$loop conv=fsync,notrunc bs=512 seek=16384 2>/dev/null
@@ -434,8 +426,6 @@ lain_lain() {
             echo "uwe5622_bsp_sdio" >$path/etc/modules.d/uwe5622_bsp_sdio
             echo "sprdbt_tty" >$path/etc/modules.d/sprdbt_tty
 
-            cp $path/lib/firmware/unisoc/* $path/lib/firmware
-
         elif [ $is_rockchip = true ]; then
             sed -i 's/ttyAMA0/tty1/' $path/etc/inittab
             sed -i 's/ttyS0/ttyS2/' $path/etc/inittab
@@ -444,7 +434,6 @@ lain_lain() {
             echo "uwe5622_bsp_sdio" >$path/etc/modules.d/uwe5622_bsp_sdio
             echo "sprdbt_tty" >$path/etc/modules.d/sprdbt_tty
             
-            cp $path/lib/firmware/unisoc/* $path/lib/firmware
         fi
 
         if ! grep -q 'ulimit -n' $path/etc/init.d/boot; then
@@ -456,7 +445,9 @@ lain_lain() {
             cp -f ${wireless_mac80211} ${wireless_mac80211}.bak
             sed -i "s|iw |ipconfig |g" ${wireless_mac80211}
         }
-
+        rm -rf $path/lib/firmware/
+        cp -rf $fwdriver_path/firmware $path/lib/
+        chmod 777 $path/lib/firmware/*
         chown -R 0:0 $path
     }
 }
@@ -465,7 +456,7 @@ set_rootsize() {
     local cnt=0
 
     while [ $cnt -lt 3 ]; do
-        echo "Input angka (256 512 640 768 1024 1536) default ${minsize}" | $lolcat -a -d 10
+        echo "Input number (256 512 640 768 1024 1536) default ${minsize}" | $lolcat -a -d 10
         read -p "" rootsize
         if [ ! "$rootsize" ]; then
             rootsize=$minsize
