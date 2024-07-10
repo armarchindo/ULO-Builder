@@ -4,9 +4,13 @@
 name: ULO Autobuilder
 
 on:
-  push:
-    branches:
-    - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'ulo'
+        required: true
+        default: 'ulo'
+        type: string
 
 jobs: 
   build_ipk:
