@@ -328,11 +328,7 @@ make_image() {
     local is_allwinner=false
     echo $allwinner | grep -iq $device && is_allwinner=true
 
-    if [ $is_amlogic = true ]; then
-        mke2fs -F -q -t ext4 -L "BOOT" -m 0 ${loop}p1 >/dev/null 2>&1
-    else
-        mkfs.vfat -n "BOOT" ${loop}p1 >/dev/null 2>&1
-    fi
+    mkfs.vfat -n "BOOT" ${loop}p1 >/dev/null 2>&1
     mke2fs -F -q -t ext4 -L "ROOTFS" -m 0 ${loop}p2 >/dev/null 2>&1
 
     #if [ "$device" = "s905x" ]; then
