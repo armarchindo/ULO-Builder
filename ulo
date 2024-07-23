@@ -313,11 +313,11 @@ make_image() {
     local image="$out/$device/Openwrt-$device-$kernel.img"
     [ -d $out/$device ] || mkdir -p $out/$device
 
-    fallocate -l $((16 + 128 + rootsize))M $image
+    fallocate -l $((16 + 256 + rootsize))M $image
 
     parted -s $image mklabel msdos
-    parted -s $image mkpart primary fat32 17M 151M
-    parted -s $image mkpart primary ext4 151M 100%
+    parted -s $image mkpart primary fat32 17M 273M
+    parted -s $image mkpart primary ext4 273M 100%
 
     make_losetup $image 1
 
@@ -418,17 +418,9 @@ lain_lain() {
             sed -i 's/ttyAMA0/tty1/' $path/etc/inittab
             sed -i 's/ttyS0/ttyS2/' $path/etc/inittab
 
-            echo "sprdwl_ng" >$path/etc/modules.d/sprdwl_ng
-            echo "uwe5622_bsp_sdio" >$path/etc/modules.d/uwe5622_bsp_sdio
-            echo "sprdbt_tty" >$path/etc/modules.d/sprdbt_tty
-
         elif [ $is_rockchip = true ]; then
             sed -i 's/ttyAMA0/tty1/' $path/etc/inittab
             sed -i 's/ttyS0/ttyS2/' $path/etc/inittab
-            
-            echo "sprdwl_ng" >$path/etc/modules.d/sprdwl_ng
-            echo "uwe5622_bsp_sdio" >$path/etc/modules.d/uwe5622_bsp_sdio
-            echo "sprdbt_tty" >$path/etc/modules.d/sprdbt_tty
             
         fi
 
@@ -711,7 +703,7 @@ done
 [ "$kernel" ] || choose_kernel
 [ "$rootsize" ] || set_rootsize
 
-Total_size="$((128+$rootsize))"
+Total_size="$((256+$rootsize))"
 echo -e "\n\n\n\n\n\n\n\n\n
 ${green}                              Building Firmwares${normal}\n
 ${red}                               Device${normal}  = ${green}$device${normal}
