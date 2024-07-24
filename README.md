@@ -1,24 +1,25 @@
 # ULO Builder for OpenWRT
- ULO OpenWRT Builder
+ ULO (Universal Linux OpenWrt) Builder 
+ adalah sebuah software untuk membuat firmware OpenWRT untuk berbagai device mulai dari STB sampai SBC.
+ penggunaan sangat mudah dan manusiawi cocok untuk semua kalangan
  
 https://github.com/armarchindo/ULO-Builder/assets/7347993/1aeef098-b9ce-49df-92db-585a0eaa3e94
 
-## Features
- - Support for Amlogic S905x Devices
- - Support for Amlogic S905x2 Devices
- - Support for Amlogic S905x3 Devices
- - Support for Amlogic S905x4 Devices
- - Support for Allwinner H618 Devices
- - Support for Allwinner H6 Devices
- - Support for Rockchip RK3566 Devices
+## Supported Devices
+| Amlogic | Alwinner | Rockchip |
+| -------- | ------- | ------- | 
+| S905X | H616 (Orange Pi Zero 3) | RK3566 (Orange Pi 3B) |
+| S905X2 | H6 (Orange Pi 3 LTS) | RK3588S (Orange Pi 5) |
+| S905X3 | - | - |
+| S905X4 | - | - |
    
 ## Requirements
- - `lolcat` and default packages from Linux
+ - `lolcat,pigz` and default packages from Linux
    
 ## Usage
- - Clone This repository `git clone https://github.com/armarchindo/ULO-Builder.git`
- - Copy Kernel to folder `core/kernel/kernelversion`
- - Copy ROOTFS files to folder `openwrt or debian`
+ - Clone This repository `git clone --depth=1 --brach=main https://github.com/armarchindo/ULO-Builder.git`
+ - Directory Kernel: `core/kernel/`
+ - Directory ROOTFS:  `rootfs`
  - run ULO script with superuser `sudo ./ulo`
  - select used SOC/Processor
    <p align="left">
