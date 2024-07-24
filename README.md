@@ -1,42 +1,47 @@
 # ULO Builder for OpenWRT
- ULO OpenWRT Builder
+ ULO (Universal Linux OpenWrt) Builder 
+ adalah sebuah software pembuat firmware OpenWRT untuk berbagai device dan SOC (AMLogic, ALLWinner, Rockchip)
+ penggunaan sangat mudah dan manusiawi, cocok untuk semua kalangan.
  
 https://github.com/armarchindo/ULO-Builder/assets/7347993/1aeef098-b9ce-49df-92db-585a0eaa3e94
 
-## Features
- - Support for Amlogic S905x Devices
- - Support for Amlogic S905x2 Devices
- - Support for Amlogic S905x3 Devices
- - Support for Amlogic S905x4 Devices
- - Support for Allwinner H618 Devices
- - Support for Allwinner H6 Devices
- - Support for Rockchip RK3566 Devices
+## Supported Devices
+| Amlogic | Alwinner | Rockchip |
+| -------- | ------- | ------- | 
+| S905X | H616 (Orange Pi Zero 3) | RK3566 (Orange Pi 3B) |
+| S905X2 | H6 (Orange Pi 3 LTS) | RK3588S (Orange Pi 5) |
+| S905X3 | - | - |
+| S905X4 | - | - |
    
 ## Requirements
- - `lolcat` and default packages from Linux
+ - `lolcat,pigz` and default packages from Linux
    
 ## Usage
- - Clone This repository `git clone https://github.com/armarchindo/ULO-Builder.git`
- - Copy Kernel to folder `core/kernel/kernelversion`
- - Copy ROOTFS files to folder `openwrt or debian`
+ - Clone This repository `git clone --depth=1 --brach=main https://github.com/armarchindo/ULO-Builder.git`
+ - Directory Kernel: `core/kernel/`
+ - Directory ROOTFS:  `rootfs`
  - run ULO script with superuser `sudo ./ulo`
- - select used SOC/Processor
+ - select SOC/Processor
    <p align="left">
      <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/1.png" width="75%" />
    </p>
- - select used Kernel Version for use
+ - Select rootfs
    <p align="left">
      <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/2.png" width="75%" />
    </p>
- - setting size of ROOTFS Partition
+ - Select kernel version
    <p align="left">
      <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/3.png" width="75%" />
    </p>
- - Building OpenWRT/Debian Firmware
+ - Setting size of ROOTFS Partition
    <p align="left">
      <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/4.png" width="75%" />
    </p>
- - Done, OpenWRT/Debian image at folder `out`
+   Building OpenWRT Firmware & FINISH
+   <p align="left">
+     <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/5.png" width="75%" />
+   </p>
+ - Done, OpenWRT image at folder `out`
 
  ### ULO script information
 ```bash
@@ -46,7 +51,7 @@ Usage:
 Options:
     -h, --help
     -c, --clean
-    -k                  set the kernel (-k 5.9.16)
+    -k                  set the kernel (-k 6.6.6)
     -m                  set the device (-m s905x2)
     -s, --size=SIZE     set size (-s 768)
 ```
