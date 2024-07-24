@@ -1,7 +1,7 @@
 # ULO Builder for OpenWRT
  ULO (Universal Linux OpenWrt) Builder 
  adalah sebuah software pembuat firmware OpenWRT untuk berbagai device dan SOC (AMLogic, ALLWinner, Rockchip)
- penggunaan sangat mudah dan lebih manusiawi, cocok untuk semua kalangan.
+ penggunaan sangat mudah dan manusiawi, cocok untuk semua kalangan.
  
 https://github.com/armarchindo/ULO-Builder/assets/7347993/1aeef098-b9ce-49df-92db-585a0eaa3e94
 
@@ -21,23 +21,27 @@ https://github.com/armarchindo/ULO-Builder/assets/7347993/1aeef098-b9ce-49df-92d
  - Directory Kernel: `core/kernel/`
  - Directory ROOTFS:  `rootfs`
  - run ULO script with superuser `sudo ./ulo`
- - select used SOC/Processor
+ - select SOC/Processor
    <p align="left">
      <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/1.png" width="75%" />
    </p>
- - select used Kernel Version for use
+ - Select rootfs
    <p align="left">
      <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/2.png" width="75%" />
    </p>
- - setting size of ROOTFS Partition
+ - Select kernel version
    <p align="left">
      <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/3.png" width="75%" />
    </p>
- - Building OpenWRT/Debian Firmware
+ - Setting size of ROOTFS Partition
    <p align="left">
      <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/4.png" width="75%" />
    </p>
- - Done, OpenWRT/Debian image at folder `out`
+   Building OpenWRT Firmware & FINISH
+   <p align="left">
+     <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/5.png" width="75%" />
+   </p>
+ - Done, OpenWRT image at folder `out`
 
  ### ULO script information
 ```bash
@@ -47,7 +51,7 @@ Usage:
 Options:
     -h, --help
     -c, --clean
-    -k                  set the kernel (-k 5.9.16)
+    -k                  set the kernel (-k 6.6.6)
     -m                  set the device (-m s905x2)
     -s, --size=SIZE     set size (-s 768)
 ```
