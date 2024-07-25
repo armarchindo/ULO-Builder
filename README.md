@@ -17,7 +17,7 @@ https://github.com/armarchindo/ULO-Builder/assets/7347993/1aeef098-b9ce-49df-92d
  - `lolcat,pigz` and default packages from Linux
    
 ## Usage
- - clone this repository `git clone --depth=1 --brach=main https://github.com/armarchindo/ULO-Builder.git`
+ - clone this repository `git clone --depth=1 --branch=main https://github.com/armarchindo/ULO-Builder.git`
  - directory Kernel: `core/kernel/`
  - directory ROOTFS:  `rootfs`
  - run ULO script with superuser `sudo ./ulo`
