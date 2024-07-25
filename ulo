@@ -30,14 +30,14 @@ die() {
 }
 
 check_depedencies() {
-    echo -e "Preparing install ulo dependies" 
-    req=(lolcat pigz)
-    list=`dpkg -l | grep -E "lolcat|pigz" | awk '{ print $2 }'`
+    echo -e "Preparing install ulo dependies" | $lolcat -a -d 10
+    req=(lolcat pigz aria2)
+    list=`dpkg -l | grep -E "lolcat|pigz|aria2" | awk '{ print $2 }'`
     for req_pkg in ${req[@]}; do
         for lst_pkg in $list; do
             stat=0
             if [ ${req_pkg} == $lst_pkg ] ; then
-                echo "$req_pkg Installed"
+                echo "  $req_pkg Installed" | $lolcat -a -d 1
                 stat=0
             break;
             else
@@ -45,13 +45,12 @@ check_depedencies() {
             fi
         done
         if [ $stat = 1 ] ; then
-            echo "Package $req_pkg "
-            echo "Installing $req_pkg "
+            echo "  Package $req_pkg " | $lolcat -a -d 1
+            echo "  Installing $req_pkg " | $lolcat -a -d 1
             apt install $req_pkg
         fi
     done
-    echo -e "Done...!!!"
-    sleep 2
+    echo -e "Done...!!!" | $lolcat -a -d 20
     clear
 }
 
@@ -61,29 +60,47 @@ check_requirement_files() {
     find_rootfs
     find_kernels
     [ ${#devices[*]} = 0 ] && die "No ${device_path:2} file or directory!"
-    [ ${#rootfs[*]} = 0 ] && die "No ${rootfs_path:2} file or directory!" | download_requirement_files
-    [ ${#kernels[*]} = 0 ] && echo -e "${kernel_path:2} not found." | download_requirement_files
-    [ -d "${fwdriver_path}/firmware" ] || download_requirement_files
+    [ ${#rootfs[*]} = 0 ] && statx=1
+    [ ${#kernels[*]} = 0 ] &&  statx=2
+    [ -d "${fwdriver_path}/firmware" ] || statx=3
+    if [ $statx = 1 ]; then
+        echo -e "our ROOTFS files not available!"
+        download_requirement_files false
+    elif [ $statx = 2 ]; then
+        echo -e "our Kernel files is not found!"
+        download_requirement_files false
+    elif [ $statx = 3 ]; then
+        echo -e "our Firmware files is not found!"
+        download_requirement_files false
+    fi
 }
 
 download_requirement_files() {
     local tmp_path="./tmp"
-
+    local cmd=$1
+    PID=$!
+    if [ $cmd = true ]; then
+        rm -rf ./core/kernel/*
+        rm -rf ./rootfs/*
+        rm -rf $fwdriver_path/firmware
+    fi
     [ -d "${tmp_path}" ] || mkdir $tmp_path
 
     if [ ! -f "${tmp_path}/data.zip" ]; then
         echo -e "Downloading KERNEL, ROOTFS, & Driver Firmware" | $lolcat -a -d 1
-        wget -q -O "${tmp_path}/data.zip" "${repos}/archive/refs/heads/main.zip" --show-progress
+        aria2c --out=${tmp_path}/data.zip "${repos}/archive/refs/heads/main.zip"
         echo -e "Unzipping KERNEL, ROOTFS, & Driver Firmware" | $lolcat -a -d 1
         unzip -q $tmp_path/data.zip -d $tmp_path
         cp -rf $tmp_path/ULO-repository-main/kernel ./core/
         cp -rf $tmp_path/ULO-repository-main/rootfs ./
         cp -rf $tmp_path/ULO-repository-main/firmware $fwdriver_path/
         echo -e "Done..." | $lolcat -a -d 5
+        rm -r $tmp_path
     fi
-    rm -r $tmp_path
-    echo -e "All required files are present. Please re-run this script"
-    exit 0
+    echo -e "All required files are present. Please re-run this script" | $lolcat -a -d 1
+    echo -e "Push [CTRL + C] to break" | $lolcat -a -d 5
+    kill -9 $PID
+    exit
 }
 
 check_depedencies
@@ -331,17 +348,17 @@ make_image() {
     #elif [ "$device" = "s905x2" ]; then
     #    loader="./core/loader/amlogic/s905x2.bin"
     #fi
-
+    txtloader="-"
     if [ $is_amlogic = true ]; then
         loader="./core/loader/amlogic/${device}.bin"
-        echo $loader > $rootfs_path/uboot.log
+        txtloader="${device}.bin"
         dd if=$loader of=$loop bs=1 count=444 conv=fsync 2>/dev/null
         dd if=$loader of=$loop bs=512 skip=1 seek=1 conv=fsync 2>/dev/null
     fi
 
     if [ $is_allwinner = true ]; then
         loader="./core/loader/allwinner/u-boot-sunxi-with-spl-${device}.bin"
-        echo $loader > $rootfs_path/uboot.log
+        txtloader="u-boot-sunxi-with-spl-${device}.bin"
     #    echo -e "Adding Allwinner Bootloader"
         dd if=$loader of=$loop bs=8k seek=1 conv=fsync,notrunc 2>/dev/null
     #else
@@ -352,7 +369,7 @@ make_image() {
     if [ $is_rockchip = true ]; then
         loader="./core/loader/rockchip/idbloader-${device}.img"
         loader1="./core/loader/rockchip/u-boot-${device}.itb"
-        echo $loader > $rootfs_path/uboot.log
+        txtloader="idbloader-${device}img | u-boot-${device}.itb"
     #    echo -e "Adding RK Bootloader"
         dd if=$loader of=$loop conv=fsync,notrunc bs=512 seek=64 2>/dev/null
         dd if=$loader1 of=$loop conv=fsync,notrunc bs=512 seek=16384 2>/dev/null
@@ -360,7 +377,8 @@ make_image() {
     #    dd if=$loader of=$loop conv=fsync,notrunc bs=512 seek=64 2>/dev/null
     #    dd if=$loader1 of=$loop conv=fsync,notrunc bs=512 seek=16384 2>/dev/null
     #    dd if=$loader2 of=$loop conv=fsync,notrunc bs=512 seek=24576 2>/dev/null
-    fi    
+    fi
+    echo $txtloader > $rootfs_path/uboot.log
     
     losetup -d ${loop}
 
@@ -446,7 +464,7 @@ set_rootsize() {
         if [ ! "$rootsize" ]; then
             rootsize=$minsize
             break
-        elif [[ "$rootsize" -ge "$minsize" ]] 2>/dev/null; then
+        elif [[ "$rootsize" -ge "256" ]] 2>/dev/null; then
             break
         else
             ((cnt++))
@@ -586,11 +604,13 @@ Usage:
   ulo [options]
 
 Options:
-    -h, --help
-    -c, --clean
-    -k                  set the kernel (-k 5.9.16)
-    -m                  set the device (-m s905x2)
-    -s, --size=SIZE     set size (-s 768)
+    -h, --help      : Show this Text
+    -c, --clean     : Cleaning old cache
+    -u, --update    : Update Kernel, ROOTFS, and Firmware files from ULO-Repository
+                      (Will Destroy your old Kernel, ROOTFS, and Firmware files!!!)
+    -k              : set the kernel (-k 5.9.16)
+    -m              : set the device (-m s905x2)
+    -s, --size=SIZE : set size (-s 768)
 
 EOF
 }
@@ -617,6 +637,11 @@ while [ "$1" ]; do
         -c|--clean)
             cleaning
             echo -e "Cleaning done"
+            exit
+        ;;
+        -u|--update)
+            echo -e "Updating Kernel, ROOTFS, and Firmware files from ULO-Repository"
+            download_requirement_files true
             exit
         ;;
         -d|--default)
@@ -704,21 +729,21 @@ wait
 Total_size="$((256+$rootsize))"
 uboot=$(cat ${rootfs_path}/uboot.log | cut -d '/' -f5-6)
 
-echo -e "\n\n\n\n\n\n\n\n\n
-                               Device  = $device
-                               Kernel  = $kernel
-                               Rootfs  = $(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)
-                               Size    = $Total_size M
-                               U-boot  = ${uboot}
-" | $lolcat -a -d 5
-
+echo -e "Build Information :
+    Device      = $device
+    Kernel      = $kernel
+    Rootfs      = $(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)
+    Size        = $Total_size M
+    U-boot      = ${uboot}" | $lolcat -a -d 5
+echo "    Output file = out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img.gz" | $lolcat -a -d 5
+echo -e ""
+echo "Building on progress..." | $lolcat -a -d 5
 cleaning 0
 
 pigz -qf $out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img || gzip $out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img
-echo -e '\n\n\n\n\n\n\n\n\n'
-echo "                                   Selesai"  | $lolcat -a -d 1
-echo "           Output file : out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img.gz" | $lolcat -a -d 5
 
+echo -e 'Done...' | $lolcat -a -d 5
+echo -e ""
 chmod -R 777 $out
 rm $rootfs_path/uboot.log
 rm $rootfs_path/rootfs.log
