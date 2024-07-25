@@ -3,7 +3,7 @@
  adalah sebuah software pembuat firmware OpenWRT untuk berbagai device dan SOC (AMLogic, ALLWinner, Rockchip)
  penggunaan sangat mudah dan manusiawi, cocok untuk semua kalangan.
  
-https://github.com/armarchindo/ULO-Builder/assets/7347993/1aeef098-b9ce-49df-92db-585a0eaa3e94
+https://github.com/user-attachments/assets/8a8802e7-96b2-4566-85cc-aad165e4f606
 
 ## Supported Devices
 | Amlogic | Allwinner | Rockchip |
