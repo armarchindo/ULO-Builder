@@ -12,8 +12,8 @@ minsize=640
 
 # SOC
 amlogic="s905x s905x2 s905x3 s905x4"
-allwinner="h618 h6"
-rockchip="rk3566 rk3588"
+allwinner="h6 h616 h618"
+rockchip="rk3566 rk3588s rk3588"
 
 # directory path
 device_path="./device"
@@ -64,7 +64,6 @@ check_requirement_files() {
     [ ${#rootfs[*]} = 0 ] && die "No ${rootfs_path:2} file or directory!" | download_requirement_files
     [ ${#kernels[*]} = 0 ] && echo -e "${kernel_path:2} not found." | download_requirement_files
     [ -d "${fwdriver_path}/firmware" ] || download_requirement_files
-    
 }
 
 download_requirement_files() {
@@ -73,24 +72,17 @@ download_requirement_files() {
     [ -d "${tmp_path}" ] || mkdir $tmp_path
 
     if [ ! -f "${tmp_path}/data.zip" ]; then
-        echo -e "Downloading Kernel & Driver Firmware" | $lolcat -a -d 1
+        echo -e "Downloading KERNEL, ROOTFS, & Driver Firmware" | $lolcat -a -d 1
         wget -q -O "${tmp_path}/data.zip" "${repos}/archive/refs/heads/main.zip" --show-progress
-        echo -e "Unzipping Kernel & Driver Firmware" | $lolcat -a -d 1
-        unzip $tmp_path/data.zip -d $tmp_path
-        cp -rf $tmp_path/ULO-repository-main/kernel ./core/
-        cp -rf $tmp_path/ULO-repository-main/rootfs ./
-        cp -rf $tmp_path/ULO-repository-main/firmware $fwdriver_path/
-        echo -e "Done..." | $lolcat -a -d 10
-    else
-        echo -e "Unzipping Kernel & Driver Firmware" | $lolcat -a -d 1
+        echo -e "Unzipping KERNEL, ROOTFS, & Driver Firmware" | $lolcat -a -d 1
         unzip -q $tmp_path/data.zip -d $tmp_path
         cp -rf $tmp_path/ULO-repository-main/kernel ./core/
         cp -rf $tmp_path/ULO-repository-main/rootfs ./
         cp -rf $tmp_path/ULO-repository-main/firmware $fwdriver_path/
-        echo -e "Done..." | $lolcat -a -d 10
+        echo -e "Done..." | $lolcat -a -d 5
     fi
     rm -r $tmp_path
-    echo -e "Please re-run this script"
+    echo -e "All required files are present. Please re-run this script"
     exit 0
 }
 
@@ -140,32 +132,32 @@ find_rootfs() {
 
 choose_device() {
     local i=0
-    echo -e "Chipset: " | $lolcat -a -d 10
+    echo -e "Chipset: " | $lolcat -a -d 5
     choose_option "${devices[*]}" ${#devices[*]}
     local opt=$?
     device=${devices[opt]}
     devices=($device)
-    echo -e "${device}\n" | $lolcat -a -d 10
+    echo -e "${device}\n" | $lolcat -a -d 5
 }
 
 choose_rootfs() {
     local i=0
-    echo -e "ROOTFS: " | $lolcat -a -d 10
+    echo -e "ROOTFS: " | $lolcat -a -d 5
     choose_option "${rootfs[*]}" ${#rootfs[*]}
     local opt=$?
     firmware=${rootfs[opt]}
-    echo -e "${firmware}\n" | $lolcat -a -d 10
-	echo $firmware > $rootfs_path/output.txt									  
+    echo -e "${firmware}\n" | $lolcat -a -d 5
+    echo $firmware > $rootfs_path/rootfs.log
 }
 
 choose_kernel() {
     local i=0
-    echo -e "Kernel:" | $lolcat -a -d 10
+    echo -e "Kernel:" | $lolcat -a -d 5
     choose_option "${kernels[*]}" ${#kernels[*]}
     local opt=$?
     kernel=${kernels[opt]}
     kernels=($kernel)
-    echo -e "${kernel}\n" | $lolcat -a -d 10
+    echo -e "${kernel}\n" | $lolcat -a -d 5
 }
 
 choose_option() {
@@ -180,7 +172,7 @@ choose_option() {
     [ "$len" = 1 ] && return 0
 
     while [ $cnt -lt 3 ]; do
-        echo "Select Number:"  | $lolcat -a -d 10 
+        echo "Select Number:"  | $lolcat -a -d 5 
         read -p "" opt 
         if [ ! "$opt" ]; then
             opt=0
@@ -313,7 +305,7 @@ unpack_boot_kernel() {
 }
 
 make_image() {
-    local image="$out/$device/$(cat $rootfs_path/output.txt | cut -d '-' -f1-3)-$device-k$kernel.img"
+    local image="$out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img"
     [ -d $out/$device ] || mkdir -p $out/$device
 
     fallocate -l $((16 + 256 + rootsize))M $image
@@ -342,14 +334,15 @@ make_image() {
 
     if [ $is_amlogic = true ]; then
         loader="./core/loader/amlogic/${device}.bin"
-        echo -e "Adding Amlogic Bootloader"
+        echo $loader > $rootfs_path/uboot.log
         dd if=$loader of=$loop bs=1 count=444 conv=fsync 2>/dev/null
         dd if=$loader of=$loop bs=512 skip=1 seek=1 conv=fsync 2>/dev/null
     fi
 
     if [ $is_allwinner = true ]; then
         loader="./core/loader/allwinner/u-boot-sunxi-with-spl-${device}.bin"
-        echo -e "Adding Allwinner Bootloader"
+        echo $loader > $rootfs_path/uboot.log
+    #    echo -e "Adding Allwinner Bootloader"
         dd if=$loader of=$loop bs=8k seek=1 conv=fsync,notrunc 2>/dev/null
     #else
     #    dd if=$loader of=$loop bs=8k seek=1 conv=fsync,notrunc 2>/dev/null
@@ -359,7 +352,8 @@ make_image() {
     if [ $is_rockchip = true ]; then
         loader="./core/loader/rockchip/idbloader-${device}.img"
         loader1="./core/loader/rockchip/u-boot-${device}.itb"
-        echo -e "Adding RK Bootloader"
+        echo $loader > $rootfs_path/uboot.log
+    #    echo -e "Adding RK Bootloader"
         dd if=$loader of=$loop conv=fsync,notrunc bs=512 seek=64 2>/dev/null
         dd if=$loader1 of=$loop conv=fsync,notrunc bs=512 seek=16384 2>/dev/null
     #else
@@ -367,7 +361,7 @@ make_image() {
     #    dd if=$loader1 of=$loop conv=fsync,notrunc bs=512 seek=16384 2>/dev/null
     #    dd if=$loader2 of=$loop conv=fsync,notrunc bs=512 seek=24576 2>/dev/null
     fi    
-
+    
     losetup -d ${loop}
 
     make_losetup $image
@@ -447,7 +441,7 @@ set_rootsize() {
     local cnt=0
 
     while [ $cnt -lt 3 ]; do
-        echo "Input number (256 512 640 768 1024 1536) default ${minsize}" | $lolcat -a -d 10
+        echo "Input number (256 512 640 768 1024 1536) default ${minsize}" | $lolcat -a -d 5
         read -p "" rootsize
         if [ ! "$rootsize" ]; then
             rootsize=$minsize
@@ -601,6 +595,7 @@ Options:
 EOF
 }
 
+
 echo -e "
 ======================================================================
 ----------------------------------------------------------------------
@@ -694,13 +689,6 @@ done
 [ "$kernel" ] || choose_kernel
 [ "$rootsize" ] || set_rootsize
 
-Total_size="$((256+$rootsize))"
-echo -e "\n\n\n\n\n\n\n\n\n
-                               Device  = $device
-                               Kernel  = $kernel
-                               Size    = $Total_size M
-" | $lolcat -a -d 5
-
 unpack_openwrt
 
 for kernel in ${kernels[*]}; do
@@ -713,10 +701,24 @@ for kernel in ${kernels[*]}; do
 done
 
 wait
+Total_size="$((256+$rootsize))"
+uboot=$(cat ${rootfs_path}/uboot.log | cut -d '/' -f5-6)
+
+echo -e "\n\n\n\n\n\n\n\n\n
+                               Device  = $device
+                               Kernel  = $kernel
+                               Rootfs  = $(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)
+                               Size    = $Total_size M
+                               U-boot  = ${uboot}
+" | $lolcat -a -d 5
+
 cleaning 0
-chmod -R 777 $out
-pigz -qf $out/$device/$(cat $rootfs_path/output.txt | cut -d '-' -f1-3)-$device-k$kernel.img || gzip $out/$device/$(cat $rootfs_path/output.txt | cut -d '-' -f1-3)-$device-k$kernel.img
-rm $rootfs_path/output.txt
+
+pigz -qf $out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img || gzip $out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img
 echo -e '\n\n\n\n\n\n\n\n\n'
 echo "                                   Selesai"  | $lolcat -a -d 1
-echo "           Output file : out/$device/Openwrt-$device-$kernel.img.gz" | $lolcat -a -d 30
+echo "           Output file : out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img.gz" | $lolcat -a -d 5
+
+chmod -R 777 $out
+rm $rootfs_path/uboot.log
+rm $rootfs_path/rootfs.log

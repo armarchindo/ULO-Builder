@@ -1,6 +1,6 @@
 # ULO Builder for OpenWRT
  ULO (Universal Linux OpenWrt) Builder 
- adalah sebuah software pembuat firmware OpenWRT untuk berbagai device dan SOC (AMLogic, ALLWinner, Rockchip)
+ adalah sebuah software pembuat firmware OpenWRT untuk berbagai jenis device dan SOC (AMLogic, ALLWinner, Rockchip)
  penggunaan sangat mudah dan manusiawi, cocok untuk semua kalangan.
  
 https://github.com/armarchindo/ULO-Builder/assets/7347993/1aeef098-b9ce-49df-92db-585a0eaa3e94
