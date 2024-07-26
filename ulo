@@ -55,7 +55,7 @@ check_depedencies() {
 }
 
 check_requirement_files() {
-    
+    statx=0
     find_devices
     find_rootfs
     find_kernels
