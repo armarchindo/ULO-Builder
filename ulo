@@ -100,8 +100,7 @@ download_requirement_files() {
     echo -e "All required files are present. Please re-run this script" | $lolcat -a -d 1
     echo -e "Push [CTRL + C] to break" | $lolcat -a -d 5
     # kill -9 $PID
-    exit
-    exit
+    exit 0
 }
 
 check_depedencies
