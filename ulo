@@ -99,8 +99,9 @@ download_requirement_files() {
     fi
     echo -e "All required files are present. Please re-run this script" | $lolcat -a -d 1
     echo -e "Push [CTRL + C] to break" | $lolcat -a -d 5
-    # kill -9 $PID
-    exit 0
+    find_devices
+    find_rootfs
+    find_kernels
 }
 
 check_depedencies
