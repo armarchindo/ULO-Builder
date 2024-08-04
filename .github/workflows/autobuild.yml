@@ -22,7 +22,7 @@ on:
           - s905x3
           - s905x4
           - h6
-          - h616
+          - h618
           - rk3566
           - rk3588
       rootfs_size:
