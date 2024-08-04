@@ -78,7 +78,6 @@ check_requirement_files() {
 download_requirement_files() {
     local tmp_path="./tmp"
     local cmd=$1
-    PID=$!
     if [ $cmd = true ]; then
         rm -rf ./core/kernel/*
         rm -rf ./rootfs/*
@@ -97,10 +96,10 @@ download_requirement_files() {
         echo -e "Done..." | $lolcat -a -d 5
         rm -r $tmp_path
     fi
-    echo -e "All required files are present. Please re-run this script" | $lolcat -a -d 1
-    echo -e "Push [CTRL + C] to break" | $lolcat -a -d 5
-    kill -9 $PID
-    exit
+    echo -e "All required files are present." | $lolcat -a -d 1
+    find_devices
+    find_rootfs
+    find_kernels
 }
 
 check_depedencies
