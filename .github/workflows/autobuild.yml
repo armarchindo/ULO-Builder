@@ -73,7 +73,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ./artifact/*
-          tag: ${{ github.ref }}
+          tag: ${{ inputs.devices }}
           file_glob: true
           body: |
             ##  OpenWRT Release
