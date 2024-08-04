@@ -26,9 +26,9 @@ on:
           - rk3566
           - rk3588
       rootfs_size:
-        description: "ROOTFS Size (256, 512, 1024, 2048, etc)"
+        description: "ROOTFS Size, min 640 (756, 1024, 2048, etc)"
         required: true
-        default: '512'
+        default: '1024'
         type: string
 jobs: 
   build_ipk:
