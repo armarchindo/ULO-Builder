@@ -6,20 +6,39 @@ name: ULO Autobuilder
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'ulo'
-        required: true
-        default: 'ulo'
+      notes:
+        description: 'ROOTFS at repository must 1 only'
+        required: false
+        default: '-'
         type: string
-
+      kernel:
+        description: 'Kernel Version (ex. 6.6.6, 6.1.31-localversion)'
+        required: true
+        default: '6.6.6'
+        type: string
+      devices:
+        description: "Devices"
+        required: true
+        default: "s905x"
+        type: choice
+        options:
+          - s905x
+          - s905x2
+          - s905x3
+          - s905x4
+          - h6
+          - h618
+          - rk3566
+          - rk3588
+      rootfs_size:
+        description: "ROOTFS Size, min 640 (756, 1024, 2048, etc)"
+        required: true
+        default: '1024'
+        type: string
 jobs: 
   build_ipk:
     permissions:
       contents: write
-    strategy:
-      matrix:
-        kernel: [4.9.337, 6.1.66, 6.6.6]
-        devices: [s905x, s905x2, s905x3, s905x4]
     name: ULO Autobuilder
     runs-on: ubuntu-latest
     steps:
@@ -41,12 +60,12 @@ jobs:
           
       - name: Building OpenWrt
         run: |
-          sudo ./ulo -k ${{ matrix.kernel }} -m ${{ matrix.devices }} -s 512
+          sudo ./ulo -k ${{ inputs.kernel }} -m ${{ inputs.devices }} -s ${{ inputs.rootfs_size }}
           
       - name: Creating Package Artifact
         run: |
           mkdir -p ./artifact
-          cp -rf ./out/${{ matrix.devices }}/* ./artifact/
+          cp -rf ./out/${{ inputs.devices }}/* ./artifact/
           
       - name: Delivering Package
         uses: actions/upload-artifact@v2
@@ -62,9 +81,7 @@ jobs:
           tag: ${{ github.ref }}
           file_glob: true
           body: |
-            ## OpenWRT Release
-            Kernel :
-            - 4.9.337
-            - 6.6.6
-            - 6.1.66
-         
+            ##  OpenWRT Release
+            - Devices type : ${{ inputs.devices }}
+            - Kernel version : ${{ inputs.kernel }}
+            - ROOTFS Size : ${{ inputs.rootfs_size }}
