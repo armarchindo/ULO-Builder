@@ -78,10 +78,10 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ./artifact/*
-          tag: ${{ github.ref }}
+          tag: ${{ inputs.devices }}
           file_glob: true
           body: |
-            ##  OpenWRT Release
+            ##  OpenWRT Release for ${{ inputs.devices }}
             - Devices type : ${{ inputs.devices }}
             - Kernel version : ${{ inputs.kernel }}
             - ROOTFS Size : ${{ inputs.rootfs_size }}
