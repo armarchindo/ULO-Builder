@@ -458,6 +458,7 @@ set_rootsize() {
     local cnt=0
 
     while [ $cnt -lt 3 ]; do
+        echo "Your rootfs size" | $lolcat -a -d 5
         echo "Input number (256 512 640 768 1024 1536) default ${minsize}" | $lolcat -a -d 5
         read -p "" rootsize
         if [ ! "$rootsize" ]; then
