@@ -35,6 +35,11 @@ on:
         required: true
         default: '1024'
         type: string
+      fwinfo:
+        description: 'Firmware Information'
+        required: true
+        default: 'your custom information at release pages'
+        type: string
 jobs: 
   build_ipk:
     permissions:
@@ -81,7 +86,12 @@ jobs:
           tag: ${{ inputs.devices }}
           file_glob: true
           body: |
-            ##  OpenWRT Release for ${{ inputs.devices }}
-            - Devices type : ${{ inputs.devices }}
-            - Kernel version : ${{ inputs.kernel }}
-            - ROOTFS Size : ${{ inputs.rootfs_size }}
+            ##  OpenWRT Release for ${{ inputs.devices }} devices
+            ULO-Builder Release from Github Workflow
+            ### OpenWrt Image Information
+            - Firmware Details : 
+              - Devices type : ${{ inputs.devices }}
+              - Kernel version : ${{ inputs.kernel }}
+              - ROOTFS Size : ${{ inputs.rootfs_size }}
+            - Firmware Information : 
+              - ${{ inputs.fwinfo }}
