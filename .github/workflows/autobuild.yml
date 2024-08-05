@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       notes:
-        description: 'ROOTFS at repository must 1 only'
+        description: 'FYI : ROOTFS at repository must 1 only'
         required: false
         default: '-'
         type: string
@@ -26,10 +26,20 @@ on:
           - s905x2
           - s905x3
           - s905x4
-          - h6
-          - h618
-          - rk3566
-          - rk3588
+          - h5-orangepi-zeroplus2
+          - h5-orangepi-zeroplus
+          - h5-orangepi-prime
+          - h5-orangepi-pc2
+          - h6-orangepi-lite2
+          - h6-orangepi-1plus
+          - h6-orangepi-3
+          - h6-orangepi-3lts
+          - h616-orangepi-zero2
+          - h618-orangepi-zero2w
+          - h618-orangepi-zero3
+          - rk3566-orangepi-3b
+          - rk3588-orangepi-5plus
+          - rk3588s-orangepi-5
       rootfs_size:
         description: "ROOTFS Size, min 640 (756, 1024, 2048, etc)"
         required: true

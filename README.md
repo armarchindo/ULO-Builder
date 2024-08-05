@@ -8,10 +8,10 @@ https://github.com/user-attachments/assets/8a8802e7-96b2-4566-85cc-aad165e4f606
 ## Supported Devices
 | Amlogic | Allwinner | Rockchip |
 | -------- | ------- | ------- | 
-| S905X | H6 (Orange Pi One Plus) | RK3566 (Orange Pi 3B) |
-| S905X2 | H6 (Orange Pi 3 LTS) | RK3588S (Orange Pi 5) |
-| S905X3 | H616 (Orange Pi Zero 2) | RK3588 (Orange Pi 5 Plus) |
-| S905X4 | H618 (Orange Pi Zero 3) | - |
+| **S905X** | **H5** (`Orange Pi Zero Plus 2`, `Orange Pi Zero Plus`, `Orange Pi Prime`, `Orange Pi PC2`) | **RK3566** (`Orange Pi 3B`) |
+| **S905X2** | **H6** (`Orange Pi 1 Plus`, `Orange Pi Lite 2`, `Orange Pi 3 LTS`, `Orange Pi 3`) | **RK3588S** (`Orange Pi 5`) |
+| **S905X3** | **H616** (`Orange Pi Zero 2`) | **RK3588** (`Orange Pi 5 Plus`) |
+| **S905X4** | **H618** (`Orange Pi Zero 3`, `Orange Pi Zero 2W`) | - |
    
 ## Requirements
  - `lolcat,pigz` and default packages from Linux

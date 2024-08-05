@@ -12,8 +12,8 @@ minsize=640
 
 # SOC
 amlogic="s905x s905x2 s905x3 s905x4"
-allwinner="h6 h616 h618"
-rockchip="rk3566 rk3588s rk3588"
+allwinner="h618-orangepi-zero3 h618-orangepi-zero2w h616-orangepi-zero2 h6-orangepi-lite2 h6-orangepi-3lts h6-orangepi-3 h6-orangepi-1plus h5-orangepi-zeroplus2 h5-orangepi-zeroplus h5-orangepi-prime h5-orangepi-pc2"
+rockchip="rk3588s-orangepi-5 rk3588-orangepi-5plus rk3566-orangepi-3b"
 
 # directory path
 device_path="./device"
@@ -64,13 +64,13 @@ check_requirement_files() {
     [ ${#kernels[*]} = 0 ] &&  statx=2
     [ -d "${fwdriver_path}/firmware" ] || statx=3
     if [ $statx = 1 ]; then
-        echo -e "our ROOTFS files not available!"
+        echo -e "ROOTFS files not available!"
         download_requirement_files false
     elif [ $statx = 2 ]; then
-        echo -e "our Kernel files is not found!"
+        echo -e "Kernel files is not found!"
         download_requirement_files false
     elif [ $statx = 3 ]; then
-        echo -e "our Firmware files is not found!"
+        echo -e "Firmware files is not found!"
         download_requirement_files false
     fi
 }
