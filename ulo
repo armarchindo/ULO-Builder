@@ -171,7 +171,7 @@ choose_rootfs() {
 choose_kernel() {
     local i=0
     echo -e "Kernel:" | $lolcat -a -d 5
-    choose_option "${kernels[*]}" ${#kernels[*]}
+    choose_option "${kernels[*]}" ${#kernels[*]} "kernel"
     local opt=$?
     kernel=${kernels[opt]}
     kernels=($kernel)
@@ -181,11 +181,28 @@ choose_kernel() {
 choose_option() {
     local options=$1
     local len=$2
+    local optx=$3
     local cnt=0
-
-    for x in ${options[*]}; do
-        echo -e "($((++i))) => $x "
-    done
+    
+    if [ ! $optx ]; then
+        for x in ${options[*]}; do
+            echo -e "($((++i))) => $x "
+        done
+    else
+        for x in ${options[*]}; do
+            local kinfo=`ls core/kernel/${x} | grep dtb | cut -d- -f2`
+            if [ $kinfo = 'amlogic' ]; then
+                kinfo='Amlogic  '
+            elif [ $kinfo = 'allwinner' ]; then
+                kinfo='AllWinner'
+            elif [ $kinfo = 'rockchip' ]; then
+                kinfo='Rockchip '
+            else
+                kinfo='Undefined'
+            fi
+            echo -e "($((++i))) => $kinfo $x "
+        done
+    fi
 
     [ "$len" = 1 ] && return 0
 
@@ -240,7 +257,7 @@ unpack_openwrt() {
     local path="$rootfs_path/$firmware"
     local suffix="${firmware##*.}"
     common_root="$tmp/core/root"
-	start_build=$SECONDS
+    start_build=$SECONDS
 
     mkdir -p $common_root
 
@@ -622,8 +639,8 @@ EOF
 echo -e "
 ======================================================================
 ----------------------------------------------------------------------
-				ULO BUILDER
-				  By DBAI
+                            ULO BUILDER
+                              By DBAI
 ----------------------------------------------------------------------
 ======================================================================
 " | $lolcat -a -d 5
