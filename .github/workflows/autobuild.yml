@@ -95,6 +95,7 @@ jobs:
           file: ./artifact/*
           tag: ${{ inputs.devices }}
           file_glob: true
+          overwrite: true
           body: |
             ##  OpenWRT Release for ${{ inputs.devices }} devices
             ULO-Builder Release from Github Workflow
