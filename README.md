@@ -44,16 +44,36 @@ https://github.com/user-attachments/assets/8a8802e7-96b2-4566-85cc-aad165e4f606
  - done, the OpenWRT image is located in the `out` folder 
 
  ### ULO script information
+ - ULO Repository Template : [ULO Repository](https://github.com/armarchindo/ULO-repository)
+ - How to change `ULO Repository` at `ULO Builder`
+   1. Fork [ULO Repository](https://github.com/armarchindo/ULO-repository) on your github
+   2. You can edit a `firmware`, `rootfs`, `kernel` files at your `ULO Repository`
+   3. Edit your ULO Script at lines `25`<br>
+   Change default ULO Repository to your URL Repository, example...
+   ```bash
+     # DEFAULT REPOSITORY
+     # Kernel & Firmware Repository
+     repos="https://github.com/armarchindo/ULO-repository"
+   ``` 
+   to
+   ```bash
+     # YOUR CUSTOM REPOSITORY
+     # Kernel & Firmware Repository
+     repos="https://github.com/xxx/ULO-repository"
+   ```
+ - ULO Command list :
 ```bash
 Usage:
   ulo [options]
 
 Options:
-    -h, --help
-    -c, --clean
-    -k                  set the kernel (-k 6.6.6)
-    -m                  set the device (-m s905x2)
-    -s, --size=SIZE     set size (-s 768)
+    -h, --help      : Show this Text
+    -c, --clean     : Cleaning old cache
+    -u, --update    : Update Kernel, ROOTFS, and Firmware files from ULO-Repository
+                      (Will Destroy your old Kernel, ROOTFS, and Firmware files!!!)
+    -k              : set the kernel (-k 5.9.16)
+    -m              : set the device (-m s905x2)
+    -s, --size=SIZE : set size (-s 768)
 ```
 ## About
 > Script ULO ini dibuat karena mbah sepuh lagi gabut.

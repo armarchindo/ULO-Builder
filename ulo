@@ -11,9 +11,9 @@ out="./out"
 minsize=640
 
 # SOC
-amlogic="s905x s905x2 s905x3 s905x4"
-allwinner="h618-orangepi-zero3 h618-orangepi-zero2w h616-orangepi-zero2 h6-orangepi-lite2 h6-orangepi-3lts h6-orangepi-3 h6-orangepi-1plus h5-orangepi-zeroplus2 h5-orangepi-zeroplus h5-orangepi-prime h5-orangepi-pc2"
-rockchip="rk3588s-orangepi-5 rk3588-orangepi-5plus rk3566-orangepi-3b"
+amlogic=`ls -l ./core/loader/amlogic | grep s9 | awk '{ print $9 }' | cut -d. -f1`
+allwinner=`ls -l ./core/loader/allwinner | grep u-boot-sunxi-with-spl | awk '{ print $9 }' | cut -c 23- | cut -d. -f1`
+rockchip=`ls -l ./core/loader/rockchip | grep idbloader | awk '{ print $9 }' | cut -c 11- | cut -d. -f1`
 
 # directory path
 device_path="./device"
@@ -23,6 +23,8 @@ fwdriver_path="./core/root/lib"
 
 # Kernel & Firmware Repository
 repos="https://github.com/armarchindo/ULO-repository"
+
+start_cnt=$SECONDS
 
 die() {
     echo -e "ERROR.. = $1"
@@ -169,7 +171,7 @@ choose_rootfs() {
 choose_kernel() {
     local i=0
     echo -e "Kernel:" | $lolcat -a -d 5
-    choose_option "${kernels[*]}" ${#kernels[*]}
+    choose_option "${kernels[*]}" ${#kernels[*]} "kernel"
     local opt=$?
     kernel=${kernels[opt]}
     kernels=($kernel)
@@ -179,11 +181,28 @@ choose_kernel() {
 choose_option() {
     local options=$1
     local len=$2
+    local optx=$3
     local cnt=0
-
-    for x in ${options[*]}; do
-        echo -e "($((++i))) => $x "
-    done
+    
+    if [ ! $optx ]; then
+        for x in ${options[*]}; do
+            echo -e "($((++i))) => $x "
+        done
+    else
+        for x in ${options[*]}; do
+            local kinfo=`ls core/kernel/${x} | grep dtb | cut -d- -f2`
+            if [ $kinfo = 'amlogic' ]; then
+                kinfo='Amlogic  '
+            elif [ $kinfo = 'allwinner' ]; then
+                kinfo='AllWinner'
+            elif [ $kinfo = 'rockchip' ]; then
+                kinfo='Rockchip '
+            else
+                kinfo='Undefined'
+            fi
+            echo -e "($((++i))) => $kinfo $x "
+        done
+    fi
 
     [ "$len" = 1 ] && return 0
 
@@ -238,6 +257,7 @@ unpack_openwrt() {
     local path="$rootfs_path/$firmware"
     local suffix="${firmware##*.}"
     common_root="$tmp/core/root"
+    start_build=$SECONDS
 
     mkdir -p $common_root
 
@@ -458,6 +478,7 @@ set_rootsize() {
     local cnt=0
 
     while [ $cnt -lt 3 ]; do
+        echo "Your rootfs size" | $lolcat -a -d 5
         echo "Input number (256 512 640 768 1024 1536) default ${minsize}" | $lolcat -a -d 5
         read -p "" rootsize
         if [ ! "$rootsize" ]; then
@@ -618,8 +639,8 @@ EOF
 echo -e "
 ======================================================================
 ----------------------------------------------------------------------
-				ULO BUILDER
-				  By DBAI
+                            ULO BUILDER
+                              By DBAI
 ----------------------------------------------------------------------
 ======================================================================
 " | $lolcat -a -d 5
@@ -714,6 +735,7 @@ done
 [ "$rootsize" ] || set_rootsize
 
 unpack_openwrt
+echo "Building on progress..." | $lolcat -a -d 5
 
 for kernel in ${kernels[*]}; do
     for device in ${devices[*]}; do
@@ -735,12 +757,14 @@ echo -e "Build Information :
     Size        = $Total_size M
     U-boot      = ${uboot}" | $lolcat -a -d 5
 echo "    Output file = out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img.gz" | $lolcat -a -d 5
-echo -e ""
-echo "Building on progress..." | $lolcat -a -d 5
 cleaning 0
 
 pigz -qf $out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img || gzip $out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img
+tot_time=$(($SECONDS - $start_cnt))
+build_time=$(($SECONDS - $start_build))
 
+echo "    Build Time  = $(($build_time/60))m $(($build_time%60))s" | $lolcat -a -d 5
+echo "    Total Time  = $(($tot_time/60))m $(($tot_time%60))s" | $lolcat -a -d 5
 echo -e 'Done...' | $lolcat -a -d 5
 echo -e ""
 chmod -R 777 $out
