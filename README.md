@@ -3,7 +3,7 @@
  adalah sebuah software pembuat firmware OpenWRT untuk berbagai jenis device dan SOC (AMLogic, ALLWinner, Rockchip)
  penggunaan sangat mudah dan manusiawi, cocok untuk semua kalangan.
  
-https://github.com/user-attachments/assets/8a8802e7-96b2-4566-85cc-aad165e4f606
+https://github.com/user-attachments/assets/f9b25d81-a364-4bc9-8b84-173cfa0e099e
 
 ## Supported Devices
 | Amlogic | Allwinner | Rockchip |
@@ -14,7 +14,7 @@ https://github.com/user-attachments/assets/8a8802e7-96b2-4566-85cc-aad165e4f606
 | **S905X4** | **H618** (`Orange Pi Zero 3`, `Orange Pi Zero 2W`) | - |
    
 ## Requirements
- - `lolcat,pigz` and default packages from Linux
+ - `lolcat, pigz, aria2` and default packages from Linux
    
 ## Usage
  - clone this repository `git clone --depth=1 --branch=main https://github.com/armarchindo/ULO-Builder.git`
