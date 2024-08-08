@@ -6,11 +6,6 @@ name: ULO Autobuilder
 on:
   workflow_dispatch:
     inputs:
-      notes:
-        description: 'FYI : ROOTFS at repository must 1 only'
-        required: false
-        default: '-'
-        type: string
       kernel:
         description: 'Kernel Version (ex. 6.6.6, 6.1.31-localversion)'
         required: true
@@ -40,6 +35,11 @@ on:
           - rk3566-orangepi-3b
           - rk3588-orangepi-5plus
           - rk3588s-orangepi-5
+      rootfs:
+        description: 'ROOTFS File (ex. ImmortalWrt-21-02-7-rootfs.tar.gz)'
+        required: true
+        default: 'ImmortalWrt-21-02-7-rootfs.tar.gz'
+        type: string
       rootfs_size:
         description: "ROOTFS Size, min 640 (756, 1024, 2048, etc)"
         required: true
@@ -75,7 +75,7 @@ jobs:
           
       - name: Building OpenWrt
         run: |
-          sudo ./ulo -k ${{ inputs.kernel }} -m ${{ inputs.devices }} -s ${{ inputs.rootfs_size }}
+          sudo ./ulo -k ${{ inputs.kernel }} -m ${{ inputs.devices }} -r ${{ inputs.rootfs }} -s ${{ inputs.rootfs_size }}
           
       - name: Creating Package Artifact
         run: |
@@ -103,6 +103,7 @@ jobs:
             - Firmware Details : 
               - Devices type : ${{ inputs.devices }}
               - Kernel version : ${{ inputs.kernel }}
+              - ROOTFS File : ${{ inputs.rootfs }}
               - ROOTFS Size : ${{ inputs.rootfs_size }}
             - Firmware Information : 
               - ${{ inputs.fwinfo }}

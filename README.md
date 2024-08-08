@@ -71,9 +71,10 @@ Options:
     -c, --clean     : Cleaning old cache
     -u, --update    : Update Kernel, ROOTFS, and Firmware files from ULO-Repository
                       (Will Destroy your old Kernel, ROOTFS, and Firmware files!!!)
-    -k              : set the kernel (-k 5.9.16)
-    -m              : set the device (-m s905x2)
-    -s, --size=SIZE : set size (-s 768)
+    -k              : set the kernel       (-k 5.9.16)
+    -m              : set the device       (-m s905x2)
+    -r              : set the rootfs files (-r ImmortalWrt-21.02.7-DBAI-armvirt-rootfs.tar.gz)
+    -s, --size=SIZE : set size             (-s 768)
 ```
 ## About
 > Script ULO ini dibuat karena mbah sepuh lagi gabut.
