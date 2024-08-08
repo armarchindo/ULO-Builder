@@ -628,9 +628,10 @@ Options:
     -c, --clean     : Cleaning old cache
     -u, --update    : Update Kernel, ROOTFS, and Firmware files from ULO-Repository
                       (Will Destroy your old Kernel, ROOTFS, and Firmware files!!!)
-    -k              : set the kernel (-k 5.9.16)
-    -m              : set the device (-m s905x2)
-    -s, --size=SIZE : set size (-s 768)
+    -k              : set the kernel       (-k 5.9.16)
+    -m              : set the device       (-m s905x2)
+    -r              : set the rootfs files (-r ImmortalWrt-21.02.7-DBAI-armvirt-rootfs.tar.gz)
+    -s, --size=SIZE : set size             (-s 768)
 
 EOF
 }
@@ -697,6 +698,16 @@ while [ "$1" ]; do
                 die "invalid device $device"
             fi
         ;;
+        -r)
+            rootf=$2
+            if [ -f $rootfs_path/$rootf ]; then
+                firmware=($rootf)
+                echo $firmware > $rootfs_path/rootfs.log
+                shift
+            else
+                die "invalid rootfs $rootf"
+            fi
+        ;;
         --mount)
             mount_image
             exit
@@ -718,10 +729,13 @@ while [ "$1" ]; do
 done
 
 [ "$device" ] && {
-    echo -en "device = "
+    echo -en "device\t\t=>  "
     echo -e "${devices[@]}" | sed 's/ /, /g'
 }
-[ "$firmware" ] && echo -e "firmware\t=>  $firmware"
+[ "$firmware" ] && {
+    echo -en "rootfs\t\t=>  "
+    echo -e "${firmware[@]}" | sed 's/ /, /g'
+}
 [ "$kernel" ] && {
     echo -en "kernel\t\t=>  "
     echo -e "${kernels[@]}" | sed 's/ /, /g'
