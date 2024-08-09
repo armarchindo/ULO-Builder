@@ -32,28 +32,27 @@ die() {
 }
 
 check_depedencies() {
-    echo -e "Preparing install ulo dependies" | $lolcat -a -d 10
-    req=(lolcat pigz aria2)
-    list=`dpkg -l | grep -E "lolcat|pigz|aria2" | awk '{ print $2 }'`
-    for req_pkg in ${req[@]}; do
+    echo -e "Preparing install ulo dependies"
+    req=(lolcat pigz aria2 wget)
+    list=`dpkg -l | grep -E "lolcat|pigz|aria2|wget" | awk '{ print $2 }'`
+    for req_pkg in ${req[*]}; do
         for lst_pkg in $list; do
             stat=0
             if [ ${req_pkg} == $lst_pkg ] ; then
-                echo "  $req_pkg Installed" | $lolcat -a -d 1
+                echo "  $req_pkg Installed"
                 stat=0
             break;
             else
                 stat=1
             fi
         done
-        if [ $stat = 1 ] ; then
-            echo "  Package $req_pkg " | $lolcat -a -d 1
-            echo "  Installing $req_pkg " | $lolcat -a -d 1
-            apt install $req_pkg
+        if [[ $stat = 1 ]] ; then
+            echo "  Package $req_pkg not found"
+            echo "  Installing $req_pkg "
+            apt -y install $req_pkg > /dev/null 2>&1
         fi
     done
     echo -e "Done...!!!" | $lolcat -a -d 20
-    clear
 }
 
 check_requirement_files() {
