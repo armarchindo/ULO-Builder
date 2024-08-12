@@ -32,28 +32,27 @@ die() {
 }
 
 check_depedencies() {
-    echo -e "Preparing install ulo dependies" | $lolcat -a -d 10
-    req=(lolcat pigz aria2)
-    list=`dpkg -l | grep -E "lolcat|pigz|aria2" | awk '{ print $2 }'`
-    for req_pkg in ${req[@]}; do
+    echo -e "Preparing install ulo dependies"
+    req=(lolcat pigz aria2 wget)
+    list=`dpkg -l | grep -E "lolcat|pigz|aria2|wget" | awk '{ print $2 }'`
+    for req_pkg in ${req[*]}; do
         for lst_pkg in $list; do
             stat=0
             if [ ${req_pkg} == $lst_pkg ] ; then
-                echo "  $req_pkg Installed" | $lolcat -a -d 1
+                echo "  $req_pkg Installed"
                 stat=0
             break;
             else
                 stat=1
             fi
         done
-        if [ $stat = 1 ] ; then
-            echo "  Package $req_pkg " | $lolcat -a -d 1
-            echo "  Installing $req_pkg " | $lolcat -a -d 1
-            apt install $req_pkg
+        if [[ $stat = 1 ]] ; then
+            echo "  Package $req_pkg not found"
+            echo "  Installing $req_pkg "
+            apt -y install $req_pkg > /dev/null 2>&1
         fi
     done
     echo -e "Done...!!!" | $lolcat -a -d 20
-    clear
 }
 
 check_requirement_files() {
@@ -117,6 +116,34 @@ cleaning() {
     [ "$1" ] || rm -rf $out
 }
 
+kernel_checker() {
+    local kernelx=$1
+    local cmdx=$2
+    local is_amlogic=false
+    local is_allwinner=false
+    local is_rockchip=false
+    local kinfo=`ls core/kernel/${kernelx} | grep dtb | cut -d- -f2`
+
+    echo $amlogic | grep -iq $device && is_amlogic=true
+    echo $allwinner | grep -iq $device && is_allwinner=true
+    echo $rockchip | grep -iq $device && is_rockchip=true
+    
+    if [ $is_amlogic = true ] && [ $kinfo = "amlogic" ]; then
+        [ $cmdx = false ] && echo -e "${kernel}\n" | $lolcat -a -d 5
+    elif [ $is_allwinner = true ] && [ $kinfo = "allwinner" ]; then
+        [ $cmdx = false ] && echo -e "${kernel}\n" | $lolcat -a -d 5
+    elif [ $is_rockchip = true ] && [ $kinfo = "rockchip" ]; then
+        [ $cmdx = false ] && echo -e "${kernel}\n" | $lolcat -a -d 5
+    elif [ $cmdx = true ]; then
+        die "This kernel is for ${kinfo} devices!!!"
+    else
+        echo "This kernel is for ${kinfo} devices!!!"
+        echo "Please re-select"
+        find_kernels
+        choose_kernel
+    fi
+}
+
 find_devices() {
     local path=$device_path
     [ -d $path ] || return
@@ -167,7 +194,6 @@ choose_rootfs() {
     echo -e "${firmware}\n" | $lolcat -a -d 5
     echo $firmware > $rootfs_path/rootfs.log
 }
-
 choose_kernel() {
     local i=0
     echo -e "Kernel:" | $lolcat -a -d 5
@@ -175,7 +201,7 @@ choose_kernel() {
     local opt=$?
     kernel=${kernels[opt]}
     kernels=($kernel)
-    echo -e "${kernel}\n" | $lolcat -a -d 5
+    kernel_checker "${kernel}" false
 }
 
 choose_option() {
@@ -362,13 +388,10 @@ make_image() {
     mkfs.vfat -n "BOOT" ${loop}p1 >/dev/null 2>&1
     mke2fs -F -q -t ext4 -L "ROOTFS" -m 0 ${loop}p2 >/dev/null 2>&1
 
-    #if [ "$device" = "s905x" ]; then
-    #    loader="./core/loader/amlogic/s905x.bin"
-    #elif [ "$device" = "s905x2" ]; then
-    #    loader="./core/loader/amlogic/s905x2.bin"
-    #fi
-    txtloader="-"
+    txtloader=""
     if [ $is_amlogic = true ]; then
+        # AMLOGIC DEVICES BOOTLOADER
+
         loader="./core/loader/amlogic/${device}.bin"
         txtloader="${device}.bin"
         dd if=$loader of=$loop bs=1 count=444 conv=fsync 2>/dev/null
@@ -376,29 +399,44 @@ make_image() {
     fi
 
     if [ $is_allwinner = true ]; then
+        # ALLWINNER DEVICES BOOTLOADER
+
         loader="./core/loader/allwinner/u-boot-sunxi-with-spl-${device}.bin"
-        txtloader="u-boot-sunxi-with-spl-${device}.bin"
-    #    echo -e "Adding Allwinner Bootloader"
+        loader1="./core/loader/allwinner/u-boot-mainline-${device}.bin"
+
         dd if=$loader of=$loop bs=8k seek=1 conv=fsync,notrunc 2>/dev/null
-    #else
-    #    dd if=$loader of=$loop bs=8k seek=1 conv=fsync,notrunc 2>/dev/null
-    #    dd if=$loader of=$loop bs=8k seek=5 conv=fsync,notrunc 2>/dev/null
+        if [ -f ${loader} ]; then
+            dd if=$loader of=$loop bs=8k seek=1 conv=fsync,notrunc 2>/dev/null
+            txtloader="${txtloader}u-boot-sunxi-with-spl-${device}.bin"
+        fi
+        if [ -f ${loader1} ]; then
+            dd if=$loader1 of=$loop bs=8k seek=5 conv=fsync,notrunc 2>/dev/null
+            txtloader="${txtloader} | u-boot-mainline-${device}.bin"
+        fi
     fi
     
     if [ $is_rockchip = true ]; then
+        # ROCKCHIP DEVICES BOOTLOADER
+
         loader="./core/loader/rockchip/idbloader-${device}.img"
         loader1="./core/loader/rockchip/u-boot-${device}.itb"
-        txtloader="idbloader-${device}img | u-boot-${device}.itb"
-    #    echo -e "Adding RK Bootloader"
-        dd if=$loader of=$loop conv=fsync,notrunc bs=512 seek=64 2>/dev/null
-        dd if=$loader1 of=$loop conv=fsync,notrunc bs=512 seek=16384 2>/dev/null
-    #else
-    #    dd if=$loader of=$loop conv=fsync,notrunc bs=512 seek=64 2>/dev/null
-    #    dd if=$loader1 of=$loop conv=fsync,notrunc bs=512 seek=16384 2>/dev/null
-    #    dd if=$loader2 of=$loop conv=fsync,notrunc bs=512 seek=24576 2>/dev/null
+        loader2="./core/loader/rockchip/trust-${device}.bin"
+
+        if [ -f ${loader} ]; then
+            dd if=$loader of=$loop conv=fsync,notrunc bs=512 seek=64 2>/dev/null
+            txtloader="${txtloader}idbloader-${device}.img"
+        fi
+        if [ -f ${loader1} ]; then
+            dd if=$loader1 of=$loop conv=fsync,notrunc bs=512 seek=16384 2>/dev/null
+            txtloader="${txtloader} | u-boot-${device}.itb"
+        fi
+        if [ -f ${loader2} ]; then
+            dd if=$loader2 of=$loop conv=fsync,notrunc bs=512 seek=24576 2>/dev/null
+            txtloader="${txtloader} | trust-${device}.bin"
+        fi
     fi
+
     echo $txtloader > $rootfs_path/uboot.log
-    
     losetup -d ${loop}
 
     make_losetup $image
@@ -681,6 +719,7 @@ while [ "$1" ]; do
                [ -f $kernel_path/$kernel/boot-*.tar.gz ] && \
                [ -f $kernel_path/$kernel/modules-*.tar.gz ]; then
                 kernels=($kernel)
+                kernel_checker "${kernels}" true
                 shift
             else
                 die "invalid kernel $kernel"
