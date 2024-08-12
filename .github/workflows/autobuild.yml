@@ -75,7 +75,7 @@ jobs:
           
       - name: Building OpenWrt
         run: |
-          sudo ./ulo -k ${{ inputs.kernel }} -m ${{ inputs.devices }} -r ${{ inputs.rootfs }} -s ${{ inputs.rootfs_size }}
+          sudo ./ulo -m ${{ inputs.devices }} -r ${{ inputs.rootfs }} -k ${{ inputs.kernel }} -s ${{ inputs.rootfs_size }}
           
       - name: Creating Package Artifact
         run: |
