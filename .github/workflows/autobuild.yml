@@ -14,7 +14,7 @@ on:
       devices:
         description: "Devices"
         required: true
-        default: "s905x4"
+        default: "h618-orangepi-zero3"
         type: choice
         options:
           - s905x
@@ -82,7 +82,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: s905x4
+          ref: h618-orangepi-zero3
 
       - name: Download ROOTFS via link
         run: |
