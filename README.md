@@ -7,12 +7,17 @@ https://github.com/user-attachments/assets/f9b25d81-a364-4bc9-8b84-173cfa0e099e
 
 ## Supported Devices
 | Amlogic | Allwinner | Rockchip |
-| -------- | ------- | ------- | 
-| **S905X** | **H5** (`Orange Pi Zero Plus 2`, `Orange Pi Zero Plus`, `Orange Pi Prime`, `Orange Pi PC2`) | **RK3566** (`Orange Pi 3B`) |
-| **S905X2** | **H6** (`Orange Pi 1 Plus`, `Orange Pi Lite 2`, `Orange Pi 3 LTS`, `Orange Pi 3`) | **RK3588S** (`Orange Pi 5`) |
-| **S905X3** | **H616** (`Orange Pi Zero 2`) | **RK3588** (`Orange Pi 5 Plus`) |
-| **S905X4** | **H618** (`Orange Pi Zero 3`, `Orange Pi Zero 2W`) | - |
-   
+| -------- | ------- | ------- |
+| **S905**  | **A64** (`bananapi-m64`, `nanopi-a64`) | **RK3328** (`-`) |
+| **S905W** | **H5** (`Orange Pi Zero Plus 2`, `Orange Pi Zero Plus`, `Orange Pi Prime`, `Orange Pi PC2`) | **RK3399** (`-`) |
+| **S905D** | **H6** (`Orange Pi 1 Plus`, `Orange Pi Lite 2`, `Orange Pi 3 LTS`, `Orange Pi 3`, `Tanix TX6`) | **RK3528** (`-`) |
+| **S905L** | **H313** (`x96q-lpddr3`) | **RK3566** (`Orange Pi 3B`) |
+| **S905X** | **H616** (`Orange Pi Zero 2`, `X96-Mate`) | **RK3568** (`-`) |
+| **S912** | **H618** (`Orange Pi Zero 3`, `Orange Pi Zero 2W`) | **RK3588S** (`Orange Pi 5`) | 
+| **a311d** | - | **RK3588** (`Orange Pi 5 Plus`) |
+| **s922x** | - | - |
+| **S905Y4** | - | - |
+| **S905X4** | - | - |
 ## Requirements
  - `lolcat, pigz, aria2` and default packages from Linux
    
@@ -42,8 +47,12 @@ https://github.com/user-attachments/assets/f9b25d81-a364-4bc9-8b84-173cfa0e099e
      <img src="https://raw.githubusercontent.com/armarchindo/ULO-Builder/main/img/5.png" width="75%" />
    </p>
  - done, the OpenWRT image is located in the `out` folder 
-
- ### ULO script information
+ 
+ OLD KERNEL CHECK HERE
+ ```bash
+ https://github.com/armarchindo/kernel/releases
+ ```
+### ULO script information
  - ULO Repository Template : [ULO Repository](https://github.com/armarchindo/ULO-repository)
  - How to change `ULO Repository` at `ULO Builder`
    1. Fork [ULO Repository](https://github.com/armarchindo/ULO-repository) on your github
