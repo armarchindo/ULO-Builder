@@ -37,8 +37,8 @@ die() {
 
 check_depedencies() {
     echo -e "Preparing install ulo dependies"
-    req=(lolcat pigz aria2 wget)
-    list=`dpkg -l | grep -E "lolcat|pigz|aria2|wget" | awk '{ print $2 }'`
+    req=(lolcat pigz aria2 wget jq)
+    list=`dpkg -l | grep -E "lolcat|pigz|aria2|wget|jq" | awk '{ print $2 }'`
     for req_pkg in ${req[*]}; do
         for lst_pkg in $list; do
             stat=0
