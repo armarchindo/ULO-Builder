@@ -6,7 +6,7 @@
 # 
 lolcat=/usr/games/lolcat
 
-ver="1.1"
+ver="1.2"
 tmp="./tmp"
 out="./out"
 minsize=768
@@ -25,6 +25,9 @@ fwdriver_path="./core/root/lib"
 # Kernel & Firmware Repository
 repos="https://github.com/armarchindo/ULO-repository"
 
+# Custom ROOTFS Repository on releases
+rootfs_repo="armarchindo/rootfs-openwrt"
+
 start_cnt=$SECONDS
 
 die() {
@@ -34,8 +37,8 @@ die() {
 
 check_depedencies() {
     echo -e "Preparing install ulo dependies"
-    req=(lolcat pigz aria2 wget)
-    list=`dpkg -l | grep -E "lolcat|pigz|aria2|wget" | awk '{ print $2 }'`
+    req=(lolcat pigz aria2 wget jq)
+    list=`dpkg -l | grep -E "lolcat|pigz|aria2|wget|jq" | awk '{ print $2 }'`
     for req_pkg in ${req[*]}; do
         for lst_pkg in $list; do
             stat=0
@@ -54,6 +57,39 @@ check_depedencies() {
         fi
     done
     echo -e "Done...!!!" | $lolcat -a -d 20
+}
+
+custom_rootfs_files() {
+    echo -e "Do you want to add additional ROOTFS? (Y/N)"
+    local optz=$1
+    local opt=""
+    local long_url="https://api.github.com/repos/$rootfs_repo/releases"
+    echo -e "$optz"
+    if [ "$optz" = "yes" ]; then
+        opt="Y"
+    elif [ "$optz" = "no" ]; then
+        opt="N"
+    else
+        read -p "" opt 
+    fi
+    if [ "$opt" = "y" ] || [ "$opt" = "Y" ]; then
+        echo -e "Downloading ROOTFS Files..."
+        local cnt=0
+        local json_data=`curl -s $long_url`
+        local list_url=`echo $json_data | jq '.[].assets[].browser_download_url' | tr -d '"'`
+        local list_name=`echo $json_data | jq '.[].tag_name' | tr -d '"'`
+        local list_files=`echo $json_data | jq '.[].assets[].name' | tr -d '"'`
+        for names in ${list_name[*]}; do
+            ((cnt++))
+            echo -e "$cnt. $names"
+        done
+        for urls in ${list_url[*]}; do
+            aria2c -d rootfs "$urls"
+        done
+    else
+        echo -e "Custom ROOTFS skipped..."
+    fi
+    echo -e "Done...!!!"
 }
 
 check_requirement_files() {
@@ -99,6 +135,7 @@ download_requirement_files() {
         rm -r $tmp_path
     fi
     echo -e "All required files are present." | $lolcat -a -d 1
+    custom_rootfs_files
     find_devices
     find_rootfs
     find_kernels
@@ -667,6 +704,7 @@ Options:
     -c, --clean     : Cleaning old cache
     -u, --update    : Update Kernel, ROOTFS, and Firmware files from ULO-Repository
                       (Will Destroy your old Kernel, ROOTFS, and Firmware files!!!)
+    -y  --yes       : Custom ROOTFS Download.
     -k              : set the kernel       (-k 5.9.16)
     -m              : set the device       (-m s905x2)
     -r              : set the rootfs files (-r ImmortalWrt-21.02.7-DBAI-armvirt-rootfs.tar.gz)
@@ -679,7 +717,8 @@ EOF
 echo -e "
 ======================================================================
 ----------------------------------------------------------------------
-                            ULO BUILDER v${ver}
+                            ULO BUILDER 
+                               v${ver}
                               By DBAI
 ----------------------------------------------------------------------
 ======================================================================
@@ -690,6 +729,10 @@ check_requirement_files
 
 while [ "$1" ]; do
     case "$1" in
+        -y|--yes)
+            custom_rootfs_files "yes"
+            exit
+        ;;
         -h|--help)
             usage
             exit
