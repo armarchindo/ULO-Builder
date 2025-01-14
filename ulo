@@ -731,6 +731,7 @@ while [ "$1" ]; do
     case "$1" in
         -y|--yes)
             custom_rootfs_files "yes"
+            exit
         ;;
         -h|--help)
             usage
