@@ -6,10 +6,10 @@
 # 
 lolcat=/usr/games/lolcat
 
-ver="1.2a"
+ver="1.3"
 tmp="./tmp"
 out="./out"
-minsize=768
+minsize=1024
 
 # SOC
 amlogic=`ls -l ./core/loader/amlogic | grep s9 | awk '{ print $9 }' | cut -d. -f1`
@@ -38,24 +38,38 @@ die() {
 check_depedencies() {
     echo -e "Preparing install ulo dependies"
     req=(lolcat pigz aria2 wget jq)
-    list=`dpkg -l | grep -E "lolcat|pigz|aria2|wget|jq" | awk '{ print $2 }'`
-    for req_pkg in ${req[*]}; do
-        for lst_pkg in $list; do
-            stat=0
-            if [ ${req_pkg} == $lst_pkg ] ; then
+    if command -v pacman &>/dev/null; then
+        lolcat="/usr/bin/lolcat"  # Update lolcat path for Arch Linux
+        list=$(pacman -Qq | grep -E "lolcat|pigz|aria2|wget|jq")
+        for req_pkg in ${req[*]}; do
+            if echo "$list" | grep -q "^$req_pkg$"; then
                 echo "  $req_pkg Installed"
-                stat=0
-            break;
             else
-                stat=1
+                echo "  Package $req_pkg not found"
+                echo "  Installing $req_pkg "
+                sudo pacman -S --noconfirm $req_pkg > /dev/null 2>&1
             fi
         done
-        if [[ $stat = 1 ]] ; then
-            echo "  Package $req_pkg not found"
-            echo "  Installing $req_pkg "
-            apt -y install $req_pkg > /dev/null 2>&1
-        fi
-    done
+    else
+        list=$(dpkg -l | grep -E "lolcat|pigz|aria2|wget|jq" | awk '{ print $2 }')
+        for req_pkg in ${req[*]}; do
+            for lst_pkg in $list; do
+                stat=0
+                if [ ${req_pkg} == $lst_pkg ] ; then
+                    echo "  $req_pkg Installed"
+                    stat=0
+                break;
+                else
+                    stat=1
+                fi
+            done
+            if [[ $stat = 1 ]] ; then
+                echo "  Package $req_pkg not found"
+                echo "  Installing $req_pkg "
+                apt -y install $req_pkg > /dev/null 2>&1
+            fi
+        done
+    fi
     echo -e "Done...!!!" | $lolcat -a -d 20
 }
 
@@ -234,10 +248,25 @@ choose_rootfs() {
 }
 choose_kernel() {
     local i=0
+    local filtered_kernels=()
+
+    # Filter kernels based on the selected SOC
+    for kernel in "${kernels[@]}"; do
+        local kinfo=$(ls core/kernel/${kernel} | grep dtb | cut -d- -f2)
+        if [ "$kinfo" = "amlogic" ] && echo $amlogic | grep -iq $device; then
+            filtered_kernels+=("$kernel")
+        elif [ "$kinfo" = "allwinner" ] && echo $allwinner | grep -iq $device; then
+            filtered_kernels+=("$kernel")
+        elif [ "$kinfo" = "rockchip" ] && echo $rockchip | grep -iq $device; then
+            filtered_kernels+=("$kernel")
+        fi
+    done
+
+    # Show filtered kernels
     echo -e "Kernel:" | $lolcat -a -d 5
-    choose_option "${kernels[*]}" ${#kernels[*]} "kernel"
+    choose_option "${filtered_kernels[*]}" ${#filtered_kernels[*]} "kernel"
     local opt=$?
-    kernel=${kernels[opt]}
+    kernel=${filtered_kernels[opt]}
     kernels=($kernel)
     kernel_checker "${kernel}" false
 }
@@ -708,7 +737,7 @@ Options:
     -k              : set the kernel       (-k 5.9.16)
     -m              : set the device       (-m s905x2)
     -r              : set the rootfs files (-r ImmortalWrt-21.02.7-DBAI-armvirt-rootfs.tar.gz)
-    -s, --size=SIZE : set size             (-s 768)
+    -s, --size=SIZE : set size             (-s 1024)
 
 EOF
 }
@@ -864,6 +893,13 @@ echo "    Build Time  = $(($build_time/60))m $(($build_time%60))s" | $lolcat -a 
 echo "    Total Time  = $(($tot_time/60))m $(($tot_time%60))s" | $lolcat -a -d 5
 echo -e 'Done...' | $lolcat -a -d 5
 echo -e ""
+
+# Add option to burn the image
+read -p "Do you want to burn the image to a disk? (Y/N): " burn_opt
+if [[ "$burn_opt" =~ ^[Yy]$ ]]; then
+    gnome-disks --restore-disk-image="$out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img"
+fi
+
 chmod -R 777 $out
 rm $rootfs_path/uboot.log
 rm $rootfs_path/rootfs.log
