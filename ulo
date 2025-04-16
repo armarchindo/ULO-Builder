@@ -6,7 +6,7 @@
 # 
 lolcat=/usr/games/lolcat
 
-ver="1.2"
+ver="1.2a"
 tmp="./tmp"
 out="./out"
 minsize=768
