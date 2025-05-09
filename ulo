@@ -26,7 +26,7 @@ fwdriver_path="./core/root/lib"
 repos="https://github.com/armarchindo/ULO-repository"
 
 # Custom ROOTFS Repository on releases
-rootfs_repo="armarchindo/rootfs-openwrt"
+rootfs_repo="Ythuhuhaha/rootfs-openwrt"
 
 start_cnt=$SECONDS
 
