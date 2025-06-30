@@ -14,7 +14,7 @@ on:
       devices:
         description: "Devices"
         required: true
-        default: "s905x"
+        default: "s905x2"
         type: choice
         options:
           - s905x
@@ -38,7 +38,7 @@ on:
       rootfs:
         description: 'ROOTFS File (ex. ImmortalWrt-21.02.7-DBAI-armvirt-rootfs.tar.gz)'
         required: true
-        default: 'ImmortalWrt-21.02.7-DBAI-armvirt-rootfs.tar.gz'
+        default: 'OpenWrt-23.05.5-InsomWRT-armsr-armv8-generic-rootfs.tar.gz'
         type: string
       rootfs_size:
         description: "ROOTFS Size, min 640 (756, 1024, 2048, etc)"
