@@ -424,6 +424,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: combined_artifact/*
           tag: ${{ steps.date.outputs.release_tag }}
+          release_name: ${{ steps.date.outputs.release_tag }}
           file_glob: true
           overwrite: true
           body: |
