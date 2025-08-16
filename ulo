@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# 
+#
 # Copyright (c) 2023 ulo
-# 
+#
 # Licensed under the MIT.
-# 
+#
 lolcat=/usr/games/lolcat
 
-ver="1.3"
+ver="1.4"
 tmp="./tmp"
 out="./out"
 minsize=1024
@@ -16,17 +16,30 @@ amlogic=`ls -l ./core/loader/amlogic | grep s9 | awk '{ print $9 }' | cut -d. -f
 allwinner=`ls -l ./core/loader/allwinner | grep u-boot-sunxi-with-spl | awk '{ print $9 }' | cut -c 23- | cut -d. -f1`
 rockchip=`ls -l ./core/loader/rockchip | grep idbloader | awk '{ print $9 }' | cut -c 11- | cut -d. -f1`
 
-# directory path
+# Direktori path
 device_path="./device"
 kernel_path="./core/kernel"
 rootfs_path="./rootfs"
 fwdriver_path="./core/root/lib"
 
-# Kernel & Firmware Repository
-repos="https://github.com/armarchindo/ULO-repository"
+# Repositori dependensi ULO (Kernel, Rootfs Dasar, Driver Firmware)
+ulo_repo="armarchindo/ULO-repository"
 
-# Custom ROOTFS Repository on releases
+# Repositori ROOTFS kustom pada rilis
 rootfs_repo="armarchindo/rootfs-openwrt"
+
+# Atur ke 'true' untuk mengaktifkan, atau 'false' untuk menonaktifkan
+DOWNLOAD_CUSTOM_KERNEL=false
+DOWNLOAD_CUSTOM_ROOTFS=false
+
+# 1. Repositori GitHub untuk kernel (format: pengguna/repo)
+custom_kernel_repo="armarchindo/kernel"
+# 2. Nama tag rilis tempat semua kernel berada
+custom_kernel_release_tag="kernel_dbai"
+# 3. Versi kernel yang ingin diunduh, pisahkan dengan spasi
+custom_kernel_versions=( "6.1.66-DBAI" "5.4.279" "5.10.160-rk35v-dbai" "6.1.31-AW64-DBAI" "6.1.104-AW64-DBAI" "6.6.6-AW64-DBAI" "6.1.123" )
+
+selected_patch=""
 
 start_cnt=$SECONDS
 
@@ -35,46 +48,110 @@ die() {
     exit 1
 }
 
-check_depedencies() {
-    echo -e "Preparing install ulo dependies"
-    req=(lolcat pigz aria2 wget jq)
-    if command -v pacman &>/dev/null; then
-        lolcat="/usr/bin/lolcat"  # Update lolcat path for Arch Linux
-        list=$(pacman -Qq | grep -E "lolcat|pigz|aria2|wget|jq")
-        for req_pkg in ${req[*]}; do
-            if echo "$list" | grep -q "^$req_pkg$"; then
-                echo "  $req_pkg Installed"
+download_and_extract_custom_kernels() {
+    if [ "$DOWNLOAD_CUSTOM_KERNEL" = false ]; then
+        echo "Pengunduhan kernel kustom dinonaktifkan. Melewati..."
+        return
+    fi
+
+    if [ ${#custom_kernel_versions[@]} -eq 0 ]; then
+        echo "Tidak ada versi kernel yang ditentukan di 'custom_kernel_versions', proses dilewati."
+        return
+    fi
+
+    echo "Mengambil daftar kernel dari rilis '$custom_kernel_release_tag'..." | $lolcat
+    
+    local api_url="https://api.github.com/repos/$custom_kernel_repo/releases/tags/$custom_kernel_release_tag"
+    
+    local assets_info=$(curl -s "$api_url" | jq -r '.assets[] | "\(.name) \(.browser_download_url)"')
+
+    if [ -z "$assets_info" ]; then
+        echo "ERROR: Gagal mengambil daftar aset. Periksa nama repositori dan tag rilis."
+        return
+    fi
+
+    echo "Memulai pengunduhan kernel kustom..." | $lolcat -a -d 5
+    
+    local temp_download_dir="./tmp_kernels_dl"
+    mkdir -p "$temp_download_dir"
+
+    for version in "${custom_kernel_versions[@]}"; do
+        local archive_name="${version}.tar.gz"
+        local extract_dir="${kernel_path}/${version}"
+
+        local download_url=$(echo "$assets_info" | grep "^${archive_name} " | awk '{print $2}')
+
+        echo "----------------------------------------"
+        
+        if [ -z "$download_url" ]; then
+            echo "-> PERINGATAN: Kernel '${archive_name}' tidak ditemukan di aset rilis. Dilewati."
+            continue
+        fi
+
+        echo "-> Mengunduh: ${archive_name}" | $lolcat
+
+        if aria2c --console-log-level=warn --dir="$temp_download_dir" -o "$archive_name" "$download_url"; then
+            echo "-> Mengekstrak ${archive_name} ke ${extract_dir}/"
+            mkdir -p "$extract_dir"
+            
+            if tar -xzf "${temp_download_dir}/${archive_name}" -C "$extract_dir/" --strip-components=1; then
+                echo "   Ekstraksi berhasil."
             else
-                echo "  Package $req_pkg not found"
-                echo "  Installing $req_pkg "
-                sudo pacman -S --noconfirm $req_pkg > /dev/null 2>&1
+                echo "   ERROR: Gagal mengekstrak ${archive_name}."
             fi
+        else
+            echo "   ERROR: Gagal mengunduh ${archive_name}."
+        fi
+    done
+
+    rm -rf "$temp_download_dir"
+    echo "----------------------------------------"
+    echo "Proses pengunduhan kernel kustom selesai." | $lolcat -a -d 5
+}
+
+check_depedencies() {
+    local pkgs_to_install=()
+    req=(lolcat pigz aria2 wget jq unrar)
+
+    if command -v pacman &>/dev/null; then
+        lolcat="/usr/bin/lolcat" # Perbarui path lolcat untuk Arch Linux
+        req+=(p7zip)
+        for pkg in "${req[@]}"; do
+            pacman -Qq "$pkg" &>/dev/null || pkgs_to_install+=("$pkg")
         done
     else
-        list=$(dpkg -l | grep -E "lolcat|pigz|aria2|wget|jq" | awk '{ print $2 }')
-        for req_pkg in ${req[*]}; do
-            for lst_pkg in $list; do
-                stat=0
-                if [ ${req_pkg} == $lst_pkg ] ; then
-                    echo "  $req_pkg Installed"
-                    stat=0
-                break;
-                else
-                    stat=1
-                fi
-            done
-            if [[ $stat = 1 ]] ; then
-                echo "  Package $req_pkg not found"
-                echo "  Installing $req_pkg "
-                apt -y install $req_pkg > /dev/null 2>&1
-            fi
+        req+=(p7zip-full)
+        for pkg in "${req[@]}"; do
+            dpkg -s "$pkg" &>/dev/null || pkgs_to_install+=("$pkg")
         done
     fi
-    echo -e "Done...!!!" | $lolcat -a -d 20
+
+    if [ ${#pkgs_to_install[@]} -gt 0 ]; then
+        echo -e "Mempersiapkan instalasi dependensi..."
+        
+        if command -v pacman &>/dev/null; then
+            for pkg in "${pkgs_to_install[@]}"; do
+                echo "  Menginstal $pkg..."
+                sudo pacman -S --noconfirm "$pkg" > /dev/null 2>&1
+            done
+        else
+            for pkg in "${pkgs_to_install[@]}"; do
+                echo "  Menginstal $pkg..."
+                sudo apt-get -y install "$pkg" > /dev/null 2>&1
+            done
+        fi
+        
+        echo -e "Selesai!!!"
+    fi
 }
 
 custom_rootfs_files() {
-    echo -e "Do you want to add additional ROOTFS? (Y/N)"
+    if [ "$DOWNLOAD_CUSTOM_ROOTFS" = false ]; then
+        echo "Pengunduhan ROOTFS kustom dinonaktifkan. Melewati..."
+        return
+    fi
+
+    echo -e "Apakah Anda ingin menambahkan ROOTFS tambahan? (Y/N)" | $lolcat -a -d 5
     local optz=$1
     local opt=""
     local long_url="https://api.github.com/repos/$rootfs_repo/releases"
@@ -84,13 +161,13 @@ custom_rootfs_files() {
     elif [ "$optz" = "no" ]; then
         opt="N"
     else
-        read -p "" opt 
+        read -p "" opt
     fi
     if [ "$opt" = "y" ] || [ "$opt" = "Y" ]; then
-        echo -e "Downloading ROOTFS Files..."
+        echo -e "Mengunduh file ROOTFS..." | $lolcat -a -d 5
         local cnt=0
         local json_data=`curl -s $long_url`
-        local list_url=`echo $json_data | jq '.[].assets[].browser_download_url' | tr -d '"'`
+        local list_url=`echo $json_data | jq -r '.[].assets[].browser_download_url'`
         local list_name=`echo $json_data | jq '.[].tag_name' | tr -d '"'`
         local list_files=`echo $json_data | jq '.[].assets[].name' | tr -d '"'`
         for names in ${list_name[*]}; do
@@ -98,12 +175,13 @@ custom_rootfs_files() {
             echo -e "$cnt. $names"
         done
         for urls in ${list_url[*]}; do
-            aria2c -d rootfs "$urls"
+            echo "Mengunduh $(basename "$urls")..."
+            aria2c --console-log-level=warn -d rootfs "$urls"
         done
     else
-        echo -e "Custom ROOTFS skipped..."
+        echo -e "ROOTFS kustom dilewati..."
     fi
-    echo -e "Done...!!!"
+    echo -e "Selesai...!!!"
 }
 
 check_requirement_files() {
@@ -111,18 +189,18 @@ check_requirement_files() {
     find_devices
     find_rootfs
     find_kernels
-    [ ${#devices[*]} = 0 ] && die "No ${device_path:2} file or directory!"
+    [ ${#devices[*]} = 0 ] && die "Tidak ada file atau direktori ${device_path:2}!"
     [ ${#rootfs[*]} = 0 ] && statx=1
-    [ ${#kernels[*]} = 0 ] &&  statx=2
+    [ ${#kernels[*]} = 0 ] && statx=2
     [ -d "${fwdriver_path}/firmware" ] || statx=3
     if [ $statx = 1 ]; then
-        echo -e "ROOTFS files not available!"
+        echo -e "File ROOTFS tidak tersedia!"
         download_requirement_files false
     elif [ $statx = 2 ]; then
-        echo -e "Kernel files is not found!"
+        echo -e "File dependensi ULO-Builder tidak ditemukan!"
         download_requirement_files false
     elif [ $statx = 3 ]; then
-        echo -e "Firmware files is not found!"
+        echo -e "Dependensi ULO tidak ditemukan!"
         download_requirement_files false
     fi
 }
@@ -138,24 +216,24 @@ download_requirement_files() {
     [ -d "${tmp_path}" ] || mkdir $tmp_path
 
     if [ ! -f "${tmp_path}/data.zip" ]; then
-        echo -e "Downloading KERNEL, ROOTFS, & Driver Firmware" | $lolcat -a -d 1
-        aria2c --out=${tmp_path}/data.zip "${repos}/archive/refs/heads/main.zip"
-        echo -e "Unzipping KERNEL, ROOTFS, & Driver Firmware" | $lolcat -a -d 1
+        echo -e "Mengunduh KERNEL, ROOTFS, & Driver Firmware" | $lolcat -a -d 1
+        aria2c --console-log-level=warn --out=${tmp_path}/data.zip "https://github.com/${ulo_repo}/archive/refs/heads/main.zip"
+        echo -e "Mengekstrak KERNEL, ROOTFS, & Driver Firmware" | $lolcat -a -d 1
         unzip -q $tmp_path/data.zip -d $tmp_path
         cp -rf $tmp_path/ULO-repository-main/kernel ./core/
         cp -rf $tmp_path/ULO-repository-main/rootfs ./
         cp -rf $tmp_path/ULO-repository-main/firmware $fwdriver_path/
-        echo -e "Done..." | $lolcat -a -d 5
+        echo -e "Selesai..." | $lolcat -a -d 5
         rm -r $tmp_path
     fi
-    echo -e "All required files are present." | $lolcat -a -d 1
+    echo -e "Semua file yang diperlukan sudah ada." | $lolcat -a -d 1
+    
+    download_and_extract_custom_kernels
     custom_rootfs_files
     find_devices
     find_rootfs
     find_kernels
 }
-
-check_depedencies
 
 cleaning() {
     for x in $(lsblk | grep $(pwd) | grep -oE 'loop[0-9]+' | sort | uniq); do
@@ -187,10 +265,10 @@ kernel_checker() {
     elif [ $is_rockchip = true ] && [ $kinfo = "rockchip" ]; then
         [ $cmdx = false ] && echo -e "${kernel}\n" | $lolcat -a -d 5
     elif [ $cmdx = true ]; then
-        die "This kernel is for ${kinfo} devices!!!"
+        die "Kernel ini untuk perangkat ${kinfo}!!!"
     else
-        echo "This kernel is for ${kinfo} devices!!!"
-        echo "Please re-select"
+        echo "Kernel ini untuk perangkat ${kinfo}!!!"
+        echo "Silakan pilih ulang"
         find_kernels
         choose_kernel
     fi
@@ -211,9 +289,15 @@ find_kernels() {
     [ -d $path ] || return
     local len=0
     IFS=$'\n'
+    kernels=()
     for x in $(ls $path); do
-        [ -f $path/$x/dtb-*.tar.gz ] && [ -f $path/$x/boot-*.tar.gz ] && [ -f $path/$x/modules-*.tar.gz ] \
-            && kernels[len++]=$x
+        if [ -d "$path/$x" ]; then
+            if [ -n "$(ls "$path/$x"/dtb-*.tar.gz 2>/dev/null)" ] && \
+               [ -n "$(ls "$path/$x"/boot-*.tar.gz 2>/dev/null)" ] && \
+               [ -n "$(ls "$path/$x"/modules-*.tar.gz 2>/dev/null)" ]; then
+                kernels[len++]=$x
+            fi
+        fi
     done
 }
 
@@ -230,7 +314,7 @@ find_rootfs() {
 choose_device() {
     local i=0
     echo -e "Chipset: " | $lolcat -a -d 5
-    choose_option "${devices[*]}" ${#devices[*]}
+    choose_option ${#devices[@]} "" "${devices[@]}"
     local opt=$?
     device=${devices[opt]}
     devices=($device)
@@ -240,19 +324,19 @@ choose_device() {
 choose_rootfs() {
     local i=0
     echo -e "ROOTFS: " | $lolcat -a -d 5
-    choose_option "${rootfs[*]}" ${#rootfs[*]}
+    choose_option ${#rootfs[@]} "" "${rootfs[@]}"
     local opt=$?
     firmware=${rootfs[opt]}
     echo -e "${firmware}\n" | $lolcat -a -d 5
     echo $firmware > $rootfs_path/rootfs.log
 }
+
 choose_kernel() {
     local i=0
     local filtered_kernels=()
 
-    # Filter kernels based on the selected SOC
     for kernel in "${kernels[@]}"; do
-        local kinfo=$(ls core/kernel/${kernel} | grep dtb | cut -d- -f2)
+        local kinfo=$(ls "core/kernel/${kernel}" | grep dtb | cut -d- -f2)
         if [ "$kinfo" = "amlogic" ] && echo $amlogic | grep -iq $device; then
             filtered_kernels+=("$kernel")
         elif [ "$kinfo" = "allwinner" ] && echo $allwinner | grep -iq $device; then
@@ -262,46 +346,79 @@ choose_kernel() {
         fi
     done
 
-    # Show filtered kernels
     echo -e "Kernel:" | $lolcat -a -d 5
-    choose_option "${filtered_kernels[*]}" ${#filtered_kernels[*]} "kernel"
+    choose_option ${#filtered_kernels[@]} "kernel" "${filtered_kernels[@]}"
     local opt=$?
     kernel=${filtered_kernels[opt]}
     kernels=($kernel)
     kernel_checker "${kernel}" false
 }
 
+choose_patch() {
+    local patch_path="./patch"
+    if [ ! -d "$patch_path" ]; then
+        echo "Direktori 'patch' tidak ditemukan. Melewati..."
+        return
+    fi
+
+    local patches=()
+    for p in $(find "$patch_path" -maxdepth 1 -type f); do
+        patches+=("$(basename "$p")")
+    done
+
+    if [ ${#patches[@]} -eq 0 ]; then
+        echo "Tidak ada patch arsip yang ditemukan di direktori 'patch'. Melewati..."
+        return
+    fi
+
+    local options=("Lewati (Tidak ada patch)" "${patches[@]}")
+
+    echo -e "Pilih patch yang akan diterapkan:" | $lolcat -a -d 5
+    choose_option ${#options[@]} "" "${options[@]}"
+
+    local opt=$?
+    if [ $opt -ne 0 ]; then
+        selected_patch=${options[$opt]}
+        echo -e "Patch dipilih: ${selected_patch}\n" | $lolcat -a -d 5
+    else
+        selected_patch=""
+        echo -e "Patch dilewati.\n"
+    fi
+}
+
 choose_option() {
-    local options=$1
-    local len=$2
-    local optx=$3
-    local cnt=0
-    
-    if [ ! $optx ]; then
-        for x in ${options[*]}; do
-            echo -e "($((++i))) => $x "
+    local len=$1
+    local optx=$2
+    shift 2
+    local options=("$@")
+    local i=0
+
+    if [ "$optx" != "kernel" ]; then
+        for x in "${options[@]}"; do
+            echo -e "($((++i))) => $x"
         done
     else
-        for x in ${options[*]}; do
-            local kinfo=`ls core/kernel/${x} | grep dtb | cut -d- -f2`
-            if [ $kinfo = 'amlogic' ]; then
+        for x in "${options[@]}"; do
+            local kinfo=$(ls "core/kernel/${x}" | grep dtb | cut -d- -f2)
+            if [ "$kinfo" = 'amlogic' ]; then
                 kinfo='Amlogic  '
-            elif [ $kinfo = 'allwinner' ]; then
+            elif [ "$kinfo" = 'allwinner' ]; then
                 kinfo='AllWinner'
-            elif [ $kinfo = 'rockchip' ]; then
+            elif [ "$kinfo" = 'rockchip' ]; then
                 kinfo='Rockchip '
             else
                 kinfo='Undefined'
             fi
-            echo -e "($((++i))) => $kinfo $x "
+            echo -e "($((++i))) => $kinfo $x"
         done
     fi
 
     [ "$len" = 1 ] && return 0
 
+    local cnt=0
     while [ $cnt -lt 3 ]; do
-        echo "Select Number:"  | $lolcat -a -d 5 
-        read -p "" opt 
+        echo "Pilih Nomor:" | $lolcat -a -d 5
+        read -p "" opt
         if [ ! "$opt" ]; then
             opt=0
             break
@@ -316,7 +433,6 @@ choose_option() {
     done
 
     [ $cnt = 3 ] && die "Bye NooB...!!!"
-
     return $opt
 }
 
@@ -340,10 +456,43 @@ make_losetup() {
         mkdir -p $mount/${loop_seq}p2
         mount ${loop}p2 $mount/${loop_seq}p2
     }
+    
     [[ ! -e ${loop}p1 && ! -e ${loop}p2 && -e ${loop} ]] && {
         mkdir -p $mount/${loop_seq}
         mount ${loop} $mount/${loop_seq}
     }
+}
+
+apply_patch() {
+    if [ -z "$selected_patch" ]; then
+        return
+    fi
+
+    local patch_file="./patch/$selected_patch"
+    local rootfs_target="$common_root"
+
+    echo "Menerapkan patch: $selected_patch..." | $lolcat -a -d 5
+
+    echo "Tipe patch: Arsip. Mengekstrak file..."
+    case "$patch_file" in
+        *.zip)
+            unzip -o "$patch_file" -d "$rootfs_target" >/dev/null 2>&1
+            ;;
+        *.rar)
+            unrar x -o+ "$patch_file" "$rootfs_target/" >/dev/null 2>&1
+            ;;
+        *.tar.gz|*.gz|*.tar.xz|*.xz)
+            tar xf "$patch_file" -C "$rootfs_target"
+            ;;
+        *.7z)
+            7z x "$patch_file" -o"$rootfs_target" -y >/dev/null 2>&1
+            ;;
+        *)
+            echo "Peringatan: Format arsip '$selected_patch' tidak dikenali. Dilewati."
+            return
+            ;;
+    esac
+    echo "Patch arsip selesai diterapkan." | $lolcat
 }
 
 unpack_openwrt() {
@@ -362,7 +511,6 @@ unpack_openwrt() {
                 suffix=${path##*.}
             ;;
             gz) 
-                # special for .tar.gz
                 if ls $path | grep -q '.tar.gz$'; then
                     tar xzf $path -C $common_root
                     break
@@ -391,6 +539,8 @@ unpack_openwrt() {
         esac
     done
     
+    apply_patch
+
     rm -rf $common_root/lib/modules/*/
 }
 
@@ -458,7 +608,6 @@ make_image() {
     txtloader=""
     if [ $is_amlogic = true ]; then
         # AMLOGIC DEVICES BOOTLOADER
-
         loader="./core/loader/amlogic/${device}.bin"
         txtloader="${device}.bin"
         dd if=$loader of=$loop bs=1 count=444 conv=fsync 2>/dev/null
@@ -467,7 +616,6 @@ make_image() {
 
     if [ $is_allwinner = true ]; then
         # ALLWINNER DEVICES BOOTLOADER
-
         loader="./core/loader/allwinner/u-boot-sunxi-with-spl-${device}.bin"
         loader1="./core/loader/allwinner/u-boot-mainline-${device}.bin"
 
@@ -484,7 +632,6 @@ make_image() {
     
     if [ $is_rockchip = true ]; then
         # ROCKCHIP DEVICES BOOTLOADER
-
         loader="./core/loader/rockchip/idbloader-${device}.img"
         loader1="./core/loader/rockchip/u-boot-${device}.itb"
         loader2="./core/loader/rockchip/trust-${device}.bin"
@@ -556,11 +703,9 @@ lain_lain() {
         elif [ $is_allwinner = true ]; then
             sed -i 's/ttyAMA0/tty1/' $path/etc/inittab
             sed -i 's/ttyS0/ttyS2/' $path/etc/inittab
-
         elif [ $is_rockchip = true ]; then
             sed -i 's/ttyAMA0/tty1/' $path/etc/inittab
             sed -i 's/ttyS0/ttyS2/' $path/etc/inittab
-            
         fi
 
         if ! grep -q 'ulimit -n' $path/etc/init.d/boot; then
@@ -572,6 +717,7 @@ lain_lain() {
             cp -f ${wireless_mac80211} ${wireless_mac80211}.bak
             sed -i "s|iw |ipconfig |g" ${wireless_mac80211}
         }
+ 
         rm -rf $path/lib/firmware/
         cp -rf $fwdriver_path/firmware $path/lib/
         chmod 777 $path/lib/firmware/*
@@ -583,8 +729,8 @@ set_rootsize() {
     local cnt=0
 
     while [ $cnt -lt 3 ]; do
-        echo "Your rootfs size" | $lolcat -a -d 5
-        echo "Input number (256 512 640 768 1024 1536) default ${minsize}" | $lolcat -a -d 5
+        echo "Ukuran rootfs Anda" | $lolcat -a -d 5
+        echo "Masukkan angka (256 512 640 768 1024 1536) default ${minsize}" | $lolcat -a -d 5
         read -p "" rootsize
         if [ ! "$rootsize" ]; then
             rootsize=$minsize
@@ -599,8 +745,6 @@ set_rootsize() {
     done
 
     [ $cnt = 3 ] && die "Bye NooB..."
-
-    echo -e "${rootsize}\n"
 }
 
 extract_kernel() {
@@ -711,7 +855,7 @@ mount_image() {
                 suffix=${path##*.}
             ;;
             img)
-                do_losetup $path
+                make_losetup $path
                 break
             ;;
             *)
@@ -725,23 +869,26 @@ mount_image() {
 
 usage() {
     cat <<-EOF
-Usage:
-  ulo [options]
+Penggunaan:
+  ulo [opsi]
 
-Options:
-    -h, --help      : Show this Text
-    -c, --clean     : Cleaning old cache
-    -u, --update    : Update Kernel, ROOTFS, and Firmware files from ULO-Repository
-                      (Will Destroy your old Kernel, ROOTFS, and Firmware files!!!)
-    -y  --yes       : Custom ROOTFS Download.
-    -k              : set the kernel       (-k 5.9.16)
-    -m              : set the device       (-m s905x2)
-    -r              : set the rootfs files (-r ImmortalWrt-21.02.7-DBAI-armvirt-rootfs.tar.gz)
-    -s, --size=SIZE : set size             (-s 1024)
+Opsi:
+    -h, --help      : Menampilkan teks ini
+    -c, --clean     : Membersihkan cache lama
+    -u, --update    : Memperbarui Kernel, ROOTFS, dan file Firmware dari ULO-Repository
+                      (Akan menghapus Kernel, ROOTFS, dan file Firmware lama!!!)
+    -y  --yes       : Unduh ROOTFS kustom
+    -k              : Atur kernel       (-k 6.1.66-DBAI)
+    -m              : Atur perangkat    (-m s905x2)
+    -r              : Atur file rootfs  (-r immortalwrt-21.02.7-vanila-armvirt-64-default-rootfs.tar.gz)
+    -s, --size=SIZE : Atur ukuran       (-s 1024)
 
 EOF
 }
 
+[ $(id -u) = 0 ] || die "Jalankan skrip ini sebagai root"
+
+check_depedencies
 
 echo -e "
 ======================================================================
@@ -752,7 +899,6 @@ echo -e "
 ----------------------------------------------------------------------
 ======================================================================
 " | $lolcat -a -d 5
-[ $(id -u) = 0 ] || die "please run this script as root"
 
 check_requirement_files
 
@@ -768,11 +914,11 @@ while [ "$1" ]; do
         ;;
         -c|--clean)
             cleaning
-            echo -e "Cleaning done"
+            echo -e "Pembersihan selesai"
             exit
         ;;
         -u|--update)
-            echo -e "Updating Kernel, ROOTFS, and Firmware files from ULO-Repository"
+            echo -e "Memperbarui Kernel, ROOTFS, dan file Firmware dari ULO-Repository"
             download_requirement_files true
             exit
         ;;
@@ -795,7 +941,7 @@ while [ "$1" ]; do
                 kernel_checker "${kernels}" true
                 shift
             else
-                die "invalid kernel $kernel"
+                die "kernel tidak valid $kernel"
             fi
         ;;
         -m)
@@ -807,7 +953,7 @@ while [ "$1" ]; do
                 [ ${#devices[*]} = 0 ] && unset device
                 shift
             else
-                die "invalid device $device"
+                die "perangkat tidak valid $device"
             fi
         ;;
         -r)
@@ -817,7 +963,7 @@ while [ "$1" ]; do
                 echo $firmware > $rootfs_path/rootfs.log
                 shift
             else
-                die "invalid rootfs $rootf"
+                die "rootfs tidak valid $rootf"
             fi
         ;;
         --mount)
@@ -829,19 +975,19 @@ while [ "$1" ]; do
             if [[ "$rootsize" -ge "$minsize" ]] 2>/dev/null; then
                 shift
             else
-                die "invalid rootsize $rootsize"
+                die "ukuran rootfs tidak valid $rootsize"
             fi
         ;;
         *)
             usage
-            die "invalid option $1"
+            die "opsi tidak valid $1"
         ;;
     esac
     shift
 done
 
 [ "$device" ] && {
-    echo -en "device\t\t=>  "
+    echo -en "perangkat\t=>  "
     echo -e "${devices[@]}" | sed 's/ /, /g'
 }
 [ "$firmware" ] && {
@@ -852,16 +998,17 @@ done
     echo -en "kernel\t\t=>  "
     echo -e "${kernels[@]}" | sed 's/ /, /g'
 }
-[ "$rootsize" ] && echo -e "rootsize\t=>  $rootsize"
+[ "$rootsize" ] && echo -e "ukuran rootfs\t=>  $rootsize"
 [ "$device" ] || [ "$firmware" ] || [ "$kernel" ] || [ "$rootsize" ] && echo 
 
 [ "$device" ] || choose_device
 [ "$firmware" ] || choose_rootfs
 [ "$kernel" ] || choose_kernel
+choose_patch
 [ "$rootsize" ] || set_rootsize
 
 unpack_openwrt
-echo "Building on progress..." | $lolcat -a -d 5
+echo "Sedang membangun..." | $lolcat -a -d 5
 
 for kernel in ${kernels[*]}; do
     for device in ${devices[*]}; do
@@ -876,26 +1023,25 @@ wait
 Total_size="$((256+$rootsize))"
 uboot=$(cat ${rootfs_path}/uboot.log | cut -d '/' -f5-6)
 
-echo -e "Build Information :
-    Device      = $device
+echo -e "Informasi Build:
+    Perangkat   = $device
     Kernel      = $kernel
     Rootfs      = $(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)
-    Size        = $Total_size M
+    Ukuran      = $Total_size M
     U-boot      = ${uboot}" | $lolcat -a -d 5
-echo "    Output file = out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img.gz" | $lolcat -a -d 5
+echo "    Lokasi Firmware = out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img.gz" | $lolcat -a -d 5
 cleaning 0
 
 pigz -qf $out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img || gzip $out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img
 tot_time=$(($SECONDS - $start_cnt))
 build_time=$(($SECONDS - $start_build))
 
-echo "    Build Time  = $(($build_time/60))m $(($build_time%60))s" | $lolcat -a -d 5
-echo "    Total Time  = $(($tot_time/60))m $(($tot_time%60))s" | $lolcat -a -d 5
-echo -e 'Done...' | $lolcat -a -d 5
+echo "    Waktu Build = $(($build_time/60))m $(($build_time%60))s" | $lolcat -a -d 5
+echo "    Total Waktu = $(($tot_time/60))m $(($tot_time%60))s" | $lolcat -a -d 5
+echo -e 'Selesai...' | $lolcat -a -d 5
 echo -e ""
 
-# Add option to burn the image
-read -p "Do you want to burn the image to a disk? (Y/N): " burn_opt
+read -p "Apakah Anda ingin menulis Firmware ke disk? (Y/N): " burn_opt
 if [[ "$burn_opt" =~ ^[Yy]$ ]]; then
     gnome-disks --restore-disk-image="$out/$device/$(cat ${rootfs_path}/rootfs.log | cut -d '-' -f1-3)-$device-k$kernel.img"
 fi

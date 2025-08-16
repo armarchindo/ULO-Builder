@@ -1,0 +1,438 @@
+name: Kamar Build ULO
+
+on:
+  workflow_dispatch:
+    inputs:
+      enable_custom_downloads:
+        description: 'Aktifkan unduhan KERNEL & ROOTFS kustom? (Centang untuk Ya)'
+        required: true
+        type: boolean
+        default: false
+
+      rootfs_choice:
+        description: 'Pilih RootFS yang akan dibuild atau pilih "custom" untuk menggunakan URL'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - immortalwrt-21.02.7-vanila-armvirt-64-default-rootfs.tar.gz
+          - immortalwrt-23.05.4-vanila-armsr-armv8-generic-ext4-rootfs.img.gz
+          - openwrt-21.02.7-vanila-armvirt-64-default-rootfs.tar.gz
+          - openwrt-23.05.5-vanila-armsr-armv8-generic-ext4-rootfs.img.gz
+          - OpenWrt-23.05.4-A2OS-armsr-armv8-generic-rootfs.tar.gz
+          - OpenWrt-23.05.4-ALKHANET-armsr-armv8-generic-rootfs.tar.gz
+          - OpenWrt-23.05.5-ALKHANET-armsr-armv8-generic-rootfs.tar.gz
+          - OpenWrt-23.05.5-InsomWRT-armsr-armv8-generic-rootfs.tar.gz
+          - custom
+
+      custom_rootfs_url:
+        description: 'URL unduhan RootFS (HANYA ISI JIKA memilih "custom" di atas)'
+        required: false
+        type: string
+
+      device_choice:
+        description: 'Pilih Perangkat & Kernel (pilih "all" untuk build semua)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - 'Amlogic: s905x (Kernel 6.1.66-DBAI)'
+          - 'Amlogic: s905x (Kernel 4.9.337)'
+          - 'Amlogic: s905x2 (Kernel 6.1.66-DBAI)'
+          - 'Amlogic: s905x2 (Kernel 5.4.279)'
+          - 'Amlogic: s905x2 (Kernel 4.9.337)'
+          - 'Amlogic: s905x3 (Kernel 6.1.66-DBAI)'
+          - 'Amlogic: s905x4 (Kernel 6.1.66-DBAI)'
+          - 'Amlogic: s905x4 (Kernel 5.4.279)'
+          - 'Rockchip: rk3588s-orangepi-5 (Kernel 5.10.160-rk35v-dbai)'
+          - 'Rockchip: rk3566-orangepi-3b (Kernel 5.10.160-rk35v-dbai)'
+          - 'Rockchip: rk3588-orangepi-5-max (Kernel 5.10.160-rk35v-dbai)'
+          - 'Rockchip: rk3588-orangepi-5-plus (Kernel 5.10.160-rk35v-dbai)'
+          - 'Allwinner: h618-orangepi-zero3 (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h618-orangepi-zero3 (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: a64-bananapi-m64 (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: a64-bananapi-m64 (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: a64-nanopi-a64 (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: a64-nanopi-a64 (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h313-x96q-lpddr3 (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h313-x96q-lpddr3 (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h5-orangepi-pc2 (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h5-orangepi-pc2 (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h5-orangepi-prime (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h5-orangepi-prime (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h5-orangepi-zeroplus (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h5-orangepi-zeroplus (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h5-orangepi-zeroplus2 (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h5-orangepi-zeroplus2 (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h6-orangepi-1plus (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h6-orangepi-1plus (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h6-orangepi-3 (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h6-orangepi-3 (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h6-orangepi-3lts (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h6-orangepi-3lts (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h6-orangepi-lite2 (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h6-orangepi-lite2 (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h6-tanix-tx6 (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h6-tanix-tx6 (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h616-orangepi-zero2 (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h616-orangepi-zero2 (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h616-x96-mate (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h616-x96-mate (Kernel 6.1.31-AW64-DBAI)'
+          - 'Allwinner: h618-orangepi-zero2w (Kernel 6.1.104-AW64-DBAI)'
+          - 'Allwinner: h618-orangepi-zero2w (Kernel 6.1.31-AW64-DBAI)'
+
+      base_patch_choice:
+        description: 'Pilih patch dasar dari repositori (opsional)'
+        required: true
+        default: 'Lewati'
+        type: choice
+        options:
+          - 'Lewati'
+          - jamu_wifi-on_v23_dan_startup.tar.xz
+          - jamu_wifi-on_v23.tar.xz
+          - startup.tar.xz
+          - jamu_wifi-on_v23_dan_startup_immortal.tar.xz
+          - startup_immortal.tar.xz
+
+      custom_patch_url:
+        description: 'URL untuk patch kustom tambahan (opsional)'
+        required: false
+        type: string
+
+      rootfs_size:
+        description: 'Ukuran ROOTFS, minimal 640 (756, 1024, 2048, dll)'
+        required: true
+        default: '1024'
+        type: string
+
+      fwinfo:
+        description: 'Informasi pemilihan versi firmware'
+        required: true
+        default: 's905x default adalah untuk STB B860H V1-V2/Dens TV V2Y jadi tinggal pakai setelah burning (HG680-P, Dens TV V2X dan tipe lain yang memakai SOC AMLOGIC s905x perlu ganti DTB berlaku untuk semua STB AMLOGIC), s905x2=HG680-FJ (B860H V5, Transvision Gen2, CYBORG 001/MNC Playbox perlu ganti DTB), s905x3=X96 Air Gigabit/WECHIP V9 (X96 MAX +, HK1 BOX, H96 MAX X3, dll juga sama perlu ganti DTB), s905x4=Akari AX810/Advan AT01 (wifi on gunakan kernel 5.4.x contoh 5.4.279 lengkap driver wifinya), perangkat selain AMLOGIC hanya kompatibel sesuai judul firmware'
+        type: string
+
+jobs:
+  determine_rootfs:
+    name: 1. Tentukan RootFS
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Tentukan matriks build RootFS
+        id: set-matrix
+        run: |
+          if [[ "${{ github.event.inputs.rootfs_choice }}" == "all" ]]; then
+            echo "Akan membuild semua versi RootFS."
+            echo 'matrix={"include":[{"name":"immortalwrt-21.02.7-vanila-armvirt-64-default-rootfs.tar.gz","tag_suffix":"ImmortalWrt-21.02.7-vanila"},{"name":"immortalwrt-23.05.4-vanila-armsr-armv8-generic-ext4-rootfs.img.gz","tag_suffix":"ImmortalWrt-23.05.4-vanila"},{"name":"openwrt-21.02.7-vanila-armvirt-64-default-rootfs.tar.gz","tag_suffix":"OpenWrt-21.02.7-vanila"},{"name":"openwrt-23.05.5-vanila-armsr-armv8-generic-ext4-rootfs.img.gz","tag_suffix":"OpenWrt-23.05.5-vanila"},{"name":"OpenWrt-23.05.4-A2OS-armsr-armv8-generic-rootfs.tar.gz","tag_suffix":"OpenWrt-23.05.4-A2OS"},{"name":"OpenWrt-23.05.4-ALKHANET-armsr-armv8-generic-rootfs.tar.gz","tag_suffix":"OpenWrt-23.05.4-ALKHANET"},{"name":"OpenWrt-23.05.5-ALKHANET-armsr-armv8-generic-rootfs.tar.gz","tag_suffix":"OpenWrt-23.05.5-ALKHANET"},{"name":"OpenWrt-23.05.5-InsomWRT-armsr-armv8-generic-rootfs.tar.gz","tag_suffix":"OpenWrt-23.05.5-InsomWRT"}]}' >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.inputs.rootfs_choice }}" == "custom" ]]; then
+            CUSTOM_URL="${{ github.event.inputs.custom_rootfs_url }}"
+            if [[ -z "$CUSTOM_URL" ]]; then
+              echo "Error: Opsi 'custom' dipilih tetapi tidak ada URL yang diberikan."
+              exit 1
+            fi
+            FILENAME=$(basename "$CUSTOM_URL")
+            CLEANED_NAME=$(echo "$FILENAME" | sed -e 's/-rootfs//g' -e 's|_rootfs||g' -e 's/\.tar\.gz$//' -e 's/\.img\.gz$//' -e 's/\.zip$//')
+            TAG_SUFFIX="Custom-$CLEANED_NAME"
+            echo "Akan membuild RootFS kustom dari URL: $CUSTOM_URL"
+            echo "matrix={\"include\":[{\"name\":\"$FILENAME\",\"tag_suffix\":\"$TAG_SUFFIX\"}]}" >> $GITHUB_OUTPUT
+          else
+            echo "Akan membuild RootFS: ${{ github.event.inputs.rootfs_choice }}"
+            TAG_SUFFIX=""
+            if [[ "${{ github.event.inputs.rootfs_choice }}" == "immortalwrt-21.02.7-vanila-armvirt-64-default-rootfs.tar.gz" ]]; then
+              TAG_SUFFIX="ImmortalWrt-21.02.7-vanila"
+            elif [[ "${{ github.event.inputs.rootfs_choice }}" == "immortalwrt-23.05.4-vanila-armsr-armv8-generic-ext4-rootfs.img.gz" ]]; then
+              TAG_SUFFIX="ImmortalWrt-23.05.4-vanila"
+            elif [[ "${{ github.event.inputs.rootfs_choice }}" == "openwrt-21.02.7-vanila-armvirt-64-default-rootfs.tar.gz" ]]; then
+              TAG_SUFFIX="OpenWrt-21.02.7-vanila"
+            elif [[ "${{ github.event.inputs.rootfs_choice }}" == "openwrt-23.05.5-vanila-armsr-armv8-generic-ext4-rootfs.img.gz" ]]; then
+              TAG_SUFFIX="OpenWrt-23.05.5-vanila"
+            elif [[ "${{ github.event.inputs.rootfs_choice }}" == "OpenWrt-23.05.4-A2OS-armsr-armv8-generic-rootfs.tar.gz" ]]; then
+              TAG_SUFFIX="OpenWrt-23.05.4-A2OS"
+            elif [[ "${{ github.event.inputs.rootfs_choice }}" == "OpenWrt-23.05.4-ALKHANET-armsr-armv8-generic-rootfs.tar.gz" ]]; then
+              TAG_SUFFIX="OpenWrt-23.05.4-ALKHANET"
+            elif [[ "${{ github.event.inputs.rootfs_choice }}" == "OpenWrt-23.05.5-ALKHANET-armsr-armv8-generic-rootfs.tar.gz" ]]; then
+              TAG_SUFFIX="OpenWrt-23.05.5-ALKHANET"
+            else
+              TAG_SUFFIX="OpenWrt-23.05.5-InsomWRT"
+            fi
+            echo "matrix={\"include\":[{\"name\":\"${{ github.event.inputs.rootfs_choice }}\",\"tag_suffix\":\"$TAG_SUFFIX\"}]}" >> $GITHUB_OUTPUT
+          fi
+
+  build_ipk:
+    name: 2. Build Firmware
+    needs: determine_rootfs
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.determine_rootfs.outputs.matrix) }}
+    steps:
+      - name: Pembersihan dan Instalasi Prasyarat
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo -E apt-get update
+          sudo -E apt-get -y install jq lolcat build-essential clang flex bison g++ gawk gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev rsync unzip zlib1g-dev file wget aria2 p7zip-full unrar
+          sudo -E apt-get -y autoremove --purge
+          sudo -E apt-get clean
+
+      - name: Checkout Repositori
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Aktifkan Unduhan Kustom (jika dipilih)
+        if: github.event.inputs.enable_custom_downloads == 'true'
+        run: |
+          echo "Mengaktifkan unduhan kernel kustom..."
+          sudo sed -i 's/DOWNLOAD_CUSTOM_KERNEL=false/DOWNLOAD_CUSTOM_KERNEL=true/' ulo
+          
+          echo "Mengaktifkan unduhan RootFS kustom..."
+          sudo sed -i 's/DOWNLOAD_CUSTOM_ROOTFS=false/DOWNLOAD_CUSTOM_ROOTFS=true/' ulo
+          
+          echo "Verifikasi konfigurasi:"
+          grep 'DOWNLOAD_CUSTOM' ulo || echo "Gagal menemukan variabel DOWNLOAD_CUSTOM di file ulo"
+
+      - name: Cache repositori ULO
+        uses: actions/cache@v4
+        with:
+          path: |
+            core/
+            rootfs/
+            device/
+          key: ${{ runner.os }}-ulo-repo-${{ hashFiles('ulo') }}
+
+      - name: Persiapan Awal & Unduhan RootFS
+        run: |
+          sudo ./ulo -y                                             
+
+      - name: Unduh RootFS Kustom (jika dipilih)
+        if: github.event.inputs.rootfs_choice == 'custom'
+        run: |
+          echo "Mengunduh RootFS kustom dari ${{ github.event.inputs.custom_rootfs_url }} menggunakan aria2c..."
+          sudo mkdir -p rootfs
+          sudo aria2c --quiet=true -x 16 -s 16 -k 1M -d "rootfs" -o "${{ matrix.name }}" "${{ github.event.inputs.custom_rootfs_url }}"
+          echo "Unduhan selesai. File disimpan sebagai rootfs/${{ matrix.name }}"
+
+      - name: Menyiapkan dan Menggabungkan Patch
+        id: patch_combiner
+        run: |
+          mkdir -p ./patch ./temp_base ./temp_custom ./temp_final
+          if [[ "${{ github.event.inputs.base_patch_choice }}" != "Lewati" ]]; then
+            BASE_PATCH_FILE="${{ github.event.inputs.base_patch_choice }}"
+            if [ -f "./patch/$BASE_PATCH_FILE" ]; then
+              tar -xf "./patch/$BASE_PATCH_FILE" -C ./temp_base
+            else
+              echo "::error::File patch dasar '$BASE_PATCH_FILE' tidak ditemukan!"
+              exit 1
+            fi
+          fi
+          if [ -n "${{ github.event.inputs.custom_patch_url }}" ]; then
+            sudo aria2c --out=custom_patch_archive --dir=./temp_custom --quiet=true -x 16 -s 16 -k 1M "${{ github.event.inputs.custom_patch_url }}"
+            CUSTOM_ARCHIVE_PATH="./temp_custom/custom_patch_archive"
+            if [ -f "$CUSTOM_ARCHIVE_PATH" ]; then
+              case $(file -b --mime-type "$CUSTOM_ARCHIVE_PATH") in
+                application/x-xz) tar -xf "$CUSTOM_ARCHIVE_PATH" -C ./temp_custom ;;
+                application/gzip) tar -xzf "$CUSTOM_ARCHIVE_PATH" -C ./temp_custom ;;
+                application/zip) unzip -o "$CUSTOM_ARCHIVE_PATH" -d ./temp_custom ;;
+                application/x-rar) unrar x -o+ "$CUSTOM_ARCHIVE_PATH" ./temp_custom/ ;;
+                application/x-7z-compressed) 7z x "$CUSTOM_ARCHIVE_PATH" -o./temp_custom ;;
+                *) echo "::error::Format arsip kustom tidak didukung!" && exit 1 ;;
+              esac
+              rm "$CUSTOM_ARCHIVE_PATH"
+            else
+              echo "::error::Gagal mengunduh patch kustom!" && exit 1
+            fi
+          fi
+          rsync -a ./temp_base/ ./temp_final/
+          rsync -a ./temp_custom/ ./temp_final/
+          if [ "$(ls -A ./temp_final)" ]; then
+            sudo rm -rf ./patch/*
+            tar -czf ./patch/combined_patch.tar.gz -C ./temp_final .
+            echo "patch_applied=combined_patch.tar.gz" >> $GITHUB_OUTPUT
+          else
+            echo "patch_applied=Tidak ada" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Membangun Semua Perangkat (jika 'all' dipilih)
+        if: github.event.inputs.device_choice == 'all'
+        run: |
+          mkdir -p ./artifact_final
+          DEVICE_LIST=$(cat <<EOF
+          {"device":"s905x","kernel":"6.1.66-DBAI"}
+          {"device":"s905x","kernel":"4.9.337"}
+          {"device":"s905x2","kernel":"6.1.66-DBAI"}
+          {"device":"s905x2","kernel":"5.4.279"}
+          {"device":"s905x2","kernel":"4.9.337"}
+          {"device":"s905x3","kernel":"6.1.66-DBAI"}
+          {"device":"s905x4","kernel":"6.1.66-DBAI"}
+          {"device":"s905x4","kernel":"5.4.279"}
+          {"device":"rk3588s-orangepi-5","kernel":"5.10.160-rk35v-dbai"}
+          {"device":"rk3566-orangepi-3b","kernel":"5.10.160-rk35v-dbai"}
+          {"device":"rk3588-orangepi-5-max","kernel":"5.10.160-rk35v-dbai"}
+          {"device":"rk3588-orangepi-5-plus","kernel":"5.10.160-rk35v-dbai"}
+          {"device":"h618-orangepi-zero3","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h618-orangepi-zero3","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"a64-bananapi-m64","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"a64-bananapi-m64","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"a64-nanopi-a64","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"a64-nanopi-a64","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h313-x96q-lpddr3","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h313-x96q-lpddr3","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h5-orangepi-pc2","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h5-orangepi-pc2","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h5-orangepi-prime","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h5-orangepi-prime","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h5-orangepi-zeroplus","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h5-orangepi-zeroplus","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h5-orangepi-zeroplus2","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h5-orangepi-zeroplus2","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h6-orangepi-1plus","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h6-orangepi-1plus","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h6-orangepi-3","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h6-orangepi-3","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h6-orangepi-3lts","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h6-orangepi-3lts","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h6-orangepi-lite2","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h6-orangepi-lite2","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h6-tanix-tx6","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h6-tanix-tx6","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h616-orangepi-zero2","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h616-orangepi-zero2","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h616-x96-mate","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h616-x96-mate","kernel":"6.1.31-AW64-DBAI"}
+          {"device":"h618-orangepi-zero2w","kernel":"6.1.104-AW64-DBAI"}
+          {"device":"h618-orangepi-zero2w","kernel":"6.1.31-AW64-DBAI"}
+          EOF
+          )
+
+          echo "$DEVICE_LIST" | while read -r device_config; do
+            if [ -z "$device_config" ]; then continue; fi
+            DEVICE=$(echo "$device_config" | jq -r .device)
+            KERNEL=$(echo "$device_config" | jq -r .kernel)
+            echo "=========================================================="
+            echo "Membangun: Perangkat=$DEVICE, Kernel=$KERNEL, RootFS=${{ matrix.name }}"
+            echo "=========================================================="
+            if [[ "${{ steps.patch_combiner.outputs.patch_applied }}" != "Tidak ada" ]]; then
+              echo "2" | sudo ./ulo -m "$DEVICE" -r "${{ matrix.name }}" -k "$KERNEL" -s "${{ github.event.inputs.rootfs_size }}"
+            else
+              echo "1" | sudo ./ulo -m "$DEVICE" -r "${{ matrix.name }}" -k "$KERNEL" -s "${{ github.event.inputs.rootfs_size }}"
+            fi
+            
+            echo "Memproses artefak untuk $DEVICE..."
+            OUTPUT_FILE=$(find ./out/$DEVICE -type f -name "*.img.gz")
+            if [ -n "$OUTPUT_FILE" ]; then
+              mv "$OUTPUT_FILE" ./artifact_final/
+              echo "Artefak dipindahkan ke ./artifact_final/"
+            else
+              echo "Peringatan: Tidak ada file .img.gz ditemukan untuk $DEVICE"
+            fi
+            
+            echo "Membersihkan direktori build untuk iterasi berikutnya..."
+            sudo rm -rf ./out ./tmp
+            echo "Status ruang disk:"
+            df -h
+          done
+
+      - name: Membangun Perangkat Spesifik (jika bukan 'all')
+        if: github.event.inputs.device_choice != 'all'
+        run: |
+          mkdir -p ./artifact_final
+          CHOICE="${{ github.event.inputs.device_choice }}"
+          DEVICE=$(echo "$CHOICE" | sed -n 's/.*: \(.*\) (.*/\1/p')
+          KERNEL=$(echo "$CHOICE" | sed -n 's/.*(Kernel \(.*\))/\1/p')
+          
+          echo "=========================================================="
+          echo "Membangun untuk RootFS: ${{ matrix.name }}"
+          echo "=========================================================="
+          
+          if [[ "${{ steps.patch_combiner.outputs.patch_applied }}" != "Tidak ada" ]]; then
+            echo "2" | sudo ./ulo -m "$DEVICE" -r "${{ matrix.name }}" -k "$KERNEL" -s "${{ github.event.inputs.rootfs_size }}"
+          else
+            echo "1" | sudo ./ulo -m "$DEVICE" -r "${{ matrix.name }}" -k "$KERNEL" -s "${{ github.event.inputs.rootfs_size }}"
+          fi
+
+          echo "Memindahkan artefak..."
+          find ./out/$DEVICE -type f -name "*.img.gz" -exec mv {} ./artifact_final/ \;
+
+      - name: Mengirim Paket
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt_package_${{ matrix.tag_suffix }}
+          path: ./artifact_final/
+
+  upload_release:
+    name: 3. Buat Rilis
+    needs: [determine_rootfs, build_ipk]
+    if: success()
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.determine_rootfs.outputs.matrix) }}
+    steps:
+      - name: Checkout Repositori
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Unduh artefak untuk ${{ matrix.tag_suffix }}
+        uses: actions/download-artifact@v4
+        with:
+          name: openwrt_package_${{ matrix.tag_suffix }}
+          path: artifacts
+
+      - name: Gabungkan artefak
+        run: |
+          mkdir -p combined_artifact
+          find ./artifacts -type f -exec mv {} ./combined_artifact/ \;
+          echo "Isi folder yang akan dirilis:"
+          ls -la combined_artifact/
+
+      - name: Dapatkan Tanggal Saat Ini
+        id: date
+        run: |
+          sudo apt-get install -y locales
+          sudo locale-gen id_ID.UTF-8
+          export LC_TIME=id_ID.UTF-8
+          export TZ="Asia/Jakarta"
+          bulan=$(date +%B)
+          tanggal=$(date +%d)
+          tahun=$(date +%Y)
+          echo "release_tag=${{ matrix.tag_suffix }}_ULO-RELEASE_${bulan}-${tanggal}-${tahun}" >> $GITHUB_OUTPUT
+
+      - name: Atur Informasi Patch untuk Rilis
+        id: patch_info
+        run: |
+          patch_text="Tidak ada"
+          if [[ "${{ github.event.inputs.base_patch_choice }}" != "Lewati" && -n "${{ github.event.inputs.custom_patch_url }}" ]]; then
+            patch_text="Gabungan dari '${{ github.event.inputs.base_patch_choice }}' dan patch kustom dari URL"
+          elif [[ "${{ github.event.inputs.base_patch_choice }}" != "Lewati" ]]; then
+            patch_text="${{ github.event.inputs.base_patch_choice }}"
+          elif [ -n "${{ github.event.inputs.custom_patch_url }}" ]; then
+            patch_text="Patch kustom dari URL"
+          fi
+          echo "patch_text=$patch_text" >> $GITHUB_OUTPUT
+
+      - name: Unggah aset rilis
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: combined_artifact/*
+          tag: ${{ steps.date.outputs.release_tag }}
+          file_glob: true
+          overwrite: true
+          body: |
+            ## Rilis OpenWrt untuk Berbagai Perangkat SBC dan STB
+            ### Informasi firmware OpenWrt
+            - Firmware ini dibuild menggunakan Github Actions dengan RootFS: **${{ matrix.tag_suffix }}**
+            - Ukuran ROOTFS: ${{ github.event.inputs.rootfs_size }}
+            - Patch diterapkan: **${{ steps.patch_info.outputs.patch_text }}**
+            - Informasi pemilihan versi firmware: ${{ github.event.inputs.fwinfo }}
+            - Facebook FP: https://www.facebook.com/armarchindo/
+            - Blog: https://dbai-team.com
+            - Pertanyaan dan diskusi hanya di grup Discord DBAI: https://discord.gg/BXNzaJFTPP
